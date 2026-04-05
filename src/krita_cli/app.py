@@ -59,9 +59,6 @@ from krita_cli.commands import (
     batch as _batch,
 )
 from krita_cli.commands import (
-    rollback as _rollback,
-)
-from krita_cli.commands import (
     brush as _brush,
 )
 from krita_cli.commands import (
@@ -90,6 +87,9 @@ from krita_cli.commands import (
 )
 from krita_cli.commands import (
     navigation as _navigation,
+)
+from krita_cli.commands import (
+    rollback as _rollback,
 )
 from krita_cli.commands import (
     selection as _selection,

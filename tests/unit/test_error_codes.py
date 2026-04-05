@@ -36,6 +36,8 @@ def test_error_code_values() -> None:
         "RATE_LIMIT_EXCEEDED",
         "BATCH_SIZE_EXCEEDED",
         "LAYER_LIMIT_EXCEEDED",
+        "ROLLBACK_NOT_POSSIBLE",
+        "BATCH_NOT_FOUND",
     }
     assert {e.value for e in ErrorCode} == expected
 
@@ -138,6 +140,8 @@ def test_command_error_with_timeout_code() -> None:
         ErrorCode.RATE_LIMIT_EXCEEDED,
         ErrorCode.BATCH_SIZE_EXCEEDED,
         ErrorCode.LAYER_LIMIT_EXCEEDED,
+        ErrorCode.ROLLBACK_NOT_POSSIBLE,
+        ErrorCode.BATCH_NOT_FOUND,
     ],
 )
 def test_all_error_codes_usable_in_krita_error(code: ErrorCode) -> None:

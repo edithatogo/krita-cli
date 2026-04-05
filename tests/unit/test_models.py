@@ -314,5 +314,7 @@ def test_command_models_registry() -> None:
         "clear_selection",
         "fill_selection",
         "deselect",
+        "get_command_history",
+        "rollback",
     }
     assert set(COMMAND_MODELS.keys()) == expected_actions
