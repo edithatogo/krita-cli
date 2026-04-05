@@ -340,7 +340,18 @@ class KritaClient:
         return self._send("open_file", validated)
 
     def batch_execute(self, commands: list[dict[str, object]], *, stop_on_error: bool = False) -> dict[str, object]:
-        """Execute multiple commands in a single batch."""
+        """Execute multiple commands in a single batch.
+
+        Args:
+            commands: List of command dicts, each with "action" and "params" keys.
+            stop_on_error: Stop executing remaining commands on first error.
+
+        Returns:
+            Dict with keys:
+            - "status": "ok" (all succeeded), "partial" (some failed), or "error" (all failed)
+            - "results": List of per-command results with "action", "status", and "result"/"error"
+            - "count": Number of commands executed
+        """
         validated = self._validate(BatchParams, {"commands": commands, "stop_on_error": stop_on_error})
         return self._send("batch", validated)
 

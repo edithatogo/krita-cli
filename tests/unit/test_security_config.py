@@ -2,36 +2,18 @@
 
 from __future__ import annotations
 
+import importlib.util
 import threading
 import time
+from pathlib import Path
 
-
-class RateLimiter:
-    """Sliding window rate limiter — copied from plugin for isolated testing."""
-
-    def __init__(self, max_commands: int = 60, window_seconds: float = 60.0) -> None:
-        self._max_commands = max_commands
-        self._window = window_seconds
-        self._timestamps: list[float] = []
-        self._lock = threading.Lock()
-
-    def allow(self) -> bool:
-        now = time.monotonic()
-        with self._lock:
-            cutoff = now - self._window
-            self._timestamps = [t for t in self._timestamps if t > cutoff]
-            if len(self._timestamps) >= self._max_commands:
-                return False
-            self._timestamps.append(now)
-            return True
-
-    @property
-    def max_commands(self) -> int:
-        return self._max_commands
-
-    @max_commands.setter
-    def max_commands(self, value: int) -> None:
-        self._max_commands = value
+# Load rate_limiter.py directly without triggering kritamcp/__init__.py
+# (which requires the Krita runtime)
+rate_limiter_path = Path(__file__).parent.parent.parent / "krita-plugin" / "kritamcp" / "rate_limiter.py"
+spec = importlib.util.spec_from_file_location("rate_limiter", rate_limiter_path)
+rate_limiter_module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(rate_limiter_module)  # type: ignore[union-attr]
+RateLimiter = rate_limiter_module.RateLimiter
 
 
 class TestRateLimiter:

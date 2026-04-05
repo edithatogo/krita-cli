@@ -28,6 +28,8 @@ from krita import *
 from PyQt5.QtCore import QThread, QTimer
 from PyQt5.QtGui import QColor
 
+from kritamcp.rate_limiter import RateLimiter
+
 # Try to import numpy for accelerated rendering
 try:
     import numpy as np
@@ -139,50 +141,6 @@ class CommandQueue:
 
 
 # -- Rate limiter ------------------------------------------------------------
-
-# SECURITY: Rate limiter prevents command flooding attacks.
-# Tracks command timestamps in a sliding window and rejects requests
-# that exceed the configured max_commands_per_minute limit.
-class RateLimiter:
-    """Sliding window rate limiter for command execution.
-
-    Tracks timestamps of command executions and rejects requests
-    that exceed the configured rate limit within any 60-second window.
-    """
-
-    def __init__(self, max_commands: int = 60, window_seconds: float = 60.0) -> None:
-        self._max_commands = max_commands
-        self._window = window_seconds
-        self._timestamps: list[float] = []
-        self._lock = threading.Lock()
-
-    def allow(self) -> bool:
-        """Check if a command is allowed under the current rate limit.
-
-        Returns True if the command is allowed (and records the timestamp),
-        False if the rate limit is exceeded.
-        """
-        import time
-
-        now = time.monotonic()
-        with self._lock:
-            # Remove timestamps outside the sliding window
-            cutoff = now - self._window
-            self._timestamps = [t for t in self._timestamps if t > cutoff]
-
-            if len(self._timestamps) >= self._max_commands:
-                return False
-
-            self._timestamps.append(now)
-            return True
-
-    @property
-    def max_commands(self) -> int:
-        return self._max_commands
-
-    @max_commands.setter
-    def max_commands(self, value: int) -> None:
-        self._max_commands = value
 
 
 # Global command queue and thread-safe counter
@@ -548,7 +506,11 @@ class KritaMCPExtension(Extension):
         # SECURITY: limit layers to prevent resource exhaustion
         all_nodes = self._get_all_nodes(doc.rootNode())
         if len(all_nodes) >= MAX_LAYERS:
-            return make_error(f"Maximum layer count exceeded ({MAX_LAYERS})", code="LAYER_LIMIT_EXCEEDED", recoverable=True)
+            return make_error(
+                f"Maximum layer count exceeded ({MAX_LAYERS})",
+                code="LAYER_LIMIT_EXCEEDED",
+                recoverable=True,
+            )
 
         layer = doc.createNode(name, layer_type)
         doc.rootNode().addChildNode(layer, None)
@@ -1302,10 +1264,10 @@ class KritaMCPExtension(Extension):
         commands = params.get("commands", [])
         stop_on_error = params.get("stop_on_error", False)
         results: list[dict[str, Any]] = []
-        
+
         ok_count = 0
         err_count = 0
-        
+
         for cmd in commands:
             action = cmd.get("action")
             cmd_params = cmd.get("params", {})
@@ -1324,7 +1286,7 @@ class KritaMCPExtension(Extension):
                 err_count += 1
                 if stop_on_error:
                     break
-        
+
         status = "ok"
         if ok_count > 0 and err_count > 0:
             status = "partial"
