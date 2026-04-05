@@ -41,6 +41,8 @@ except ImportError:
 SERVER_PORT = 5678
 CANVAS_OUTPUT_DIR = os.path.expanduser("~/krita-mcp-output")
 MAX_CANVAS_DIM = 8192
+MAX_BATCH_SIZE = 50
+MAX_LAYERS = 100
 PLUGIN_VERSION = "0.2.0"
 PROTOCOL_VERSION = "1.0.0"
 
@@ -136,9 +138,57 @@ class CommandQueue:
         return make_error("Timeout waiting for command execution", code="COMMAND_TIMEOUT", recoverable=True)
 
 
+# -- Rate limiter ------------------------------------------------------------
+
+# SECURITY: Rate limiter prevents command flooding attacks.
+# Tracks command timestamps in a sliding window and rejects requests
+# that exceed the configured max_commands_per_minute limit.
+class RateLimiter:
+    """Sliding window rate limiter for command execution.
+
+    Tracks timestamps of command executions and rejects requests
+    that exceed the configured rate limit within any 60-second window.
+    """
+
+    def __init__(self, max_commands: int = 60, window_seconds: float = 60.0) -> None:
+        self._max_commands = max_commands
+        self._window = window_seconds
+        self._timestamps: list[float] = []
+        self._lock = threading.Lock()
+
+    def allow(self) -> bool:
+        """Check if a command is allowed under the current rate limit.
+
+        Returns True if the command is allowed (and records the timestamp),
+        False if the rate limit is exceeded.
+        """
+        import time
+
+        now = time.monotonic()
+        with self._lock:
+            # Remove timestamps outside the sliding window
+            cutoff = now - self._window
+            self._timestamps = [t for t in self._timestamps if t > cutoff]
+
+            if len(self._timestamps) >= self._max_commands:
+                return False
+
+            self._timestamps.append(now)
+            return True
+
+    @property
+    def max_commands(self) -> int:
+        return self._max_commands
+
+    @max_commands.setter
+    def max_commands(self, value: int) -> None:
+        self._max_commands = value
+
+
 # Global command queue and thread-safe counter
 command_queue = CommandQueue()
 _command_counter = itertools.count(1)
+rate_limiter = RateLimiter()
 
 
 def _next_command_id() -> int:
@@ -204,6 +254,18 @@ class PaintRequestHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         """Handle POST requests — paint commands."""
+        # SECURITY: Check rate limit before processing any command
+        if not rate_limiter.allow():
+            self.send_json_response(
+                make_error(
+                    f"Rate limit exceeded. Max {rate_limiter.max_commands} commands per minute.",
+                    code="RATE_LIMIT_EXCEEDED",
+                    recoverable=True,
+                ),
+                429,
+            )
+            return
+
         content_length = int(self.headers.get("Content-Length", 0))
         body = self.rfile.read(content_length).decode("utf-8")
 
@@ -212,6 +274,21 @@ class PaintRequestHandler(BaseHTTPRequestHandler):
         except json.JSONDecodeError:
             self.send_json_response(make_error("Invalid JSON", code="INVALID_PARAMETERS", recoverable=False), 400)
             return
+
+        # SECURITY: Validate batch size before processing
+        if command.get("action") == "batch":
+            params = command.get("params", {})
+            commands = params.get("commands", [])
+            if len(commands) > MAX_BATCH_SIZE:
+                self.send_json_response(
+                    make_error(
+                        f"Batch size exceeds maximum of {MAX_BATCH_SIZE} commands.",
+                        code="BATCH_SIZE_EXCEEDED",
+                        recoverable=True,
+                    ),
+                    400,
+                )
+                return
 
         command_id = _next_command_id()
         command_queue.push(command_id, command)
@@ -468,10 +545,10 @@ class KritaMCPExtension(Extension):
         name = params.get("name", "New Layer")
         layer_type = params.get("layer_type", "paintlayer")
         
-        # Security: limit layers
+        # SECURITY: limit layers to prevent resource exhaustion
         all_nodes = self._get_all_nodes(doc.rootNode())
-        if len(all_nodes) >= 100:
-            return make_error("Maximum layer count reached (100)", code="INTERNAL_ERROR", recoverable=True)
+        if len(all_nodes) >= MAX_LAYERS:
+            return make_error(f"Maximum layer count exceeded ({MAX_LAYERS})", code="LAYER_LIMIT_EXCEEDED", recoverable=True)
 
         layer = doc.createNode(name, layer_type)
         doc.rootNode().addChildNode(layer, None)
@@ -1225,6 +1302,10 @@ class KritaMCPExtension(Extension):
         commands = params.get("commands", [])
         stop_on_error = params.get("stop_on_error", False)
         results: list[dict[str, Any]] = []
+        
+        ok_count = 0
+        err_count = 0
+        
         for cmd in commands:
             action = cmd.get("action")
             cmd_params = cmd.get("params", {})
@@ -1232,17 +1313,26 @@ class KritaMCPExtension(Extension):
                 result = self.execute_command({"action": action, "params": cmd_params})
                 if "error" in result:
                     results.append({"action": action, "status": "error", "result": result})
+                    err_count += 1
                     if stop_on_error:
                         break
                 else:
                     results.append({"action": action, "status": "ok", "result": result})
+                    ok_count += 1
             except Exception as exc:
                 results.append({"action": action, "status": "error", "error": str(exc)})
+                err_count += 1
                 if stop_on_error:
                     break
-        has_error = any(r.get("status") == "error" for r in results)
+        
+        status = "ok"
+        if ok_count > 0 and err_count > 0:
+            status = "partial"
+        elif err_count > 0:
+            status = "error"
+            
         return {
-            "status": "error" if has_error else "ok",
+            "status": status,
             "results": results,
             "count": len(results),
         }

@@ -63,7 +63,7 @@ def test_e2e_batch_operations() -> None:
             {"action": "set_color", "params": {"color": "#00ff00"}},
             {"action": "fill", "params": {"x": 100, "y": 100, "radius": 50}},
         ]
-        result = client.batch(commands)
+        result = client.batch_execute(commands)
         assert result.get("status") == "ok"
     except KritaConnectionError:
         pytest.skip("Krita is not running with the MCP plugin")

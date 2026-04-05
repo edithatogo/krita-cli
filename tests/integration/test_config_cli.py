@@ -1,68 +1,57 @@
-"""Tests for config_cli commands."""
+"""Integration tests for the 'krita config' CLI command."""
+
+from __future__ import annotations
 
 import json
+from pathlib import Path
 
+import pytest
 from typer.testing import CliRunner
 
-from krita_cli import config_cli
-from krita_cli.cli import app
+from krita_cli.app import app
+from krita_cli import config_cmd
 
 runner = CliRunner()
 
 
-def test_config_show_empty(monkeypatch, tmp_path):
-    config_path = tmp_path / "kritamcp_config.json"
-    monkeypatch.setattr(config_cli, "CONFIG_PATH", str(config_path))
+@pytest.fixture
+def mock_config(tmp_path, monkeypatch):
+    config_dir = tmp_path / ".krita-cli"
+    config_file = config_dir / "config.json"
+    monkeypatch.setattr(config_cmd, "CONFIG_DIR", config_dir)
+    monkeypatch.setattr(config_cmd, "CONFIG_FILE", config_file)
+    return config_file
 
+
+def test_config_show_defaults(mock_config):
     result = runner.invoke(app, ["config", "show"])
     assert result.exit_code == 0
-    assert "(No config stored)" in result.stdout
+    # Should show default port
+    assert "port" in result.stdout
+    assert "5678" in result.stdout
 
 
-def test_config_set_and_show(monkeypatch, tmp_path):
-    config_path = tmp_path / "kritamcp_config.json"
-    monkeypatch.setattr(config_cli, "CONFIG_PATH", str(config_path))
-
+def test_config_set_and_show(mock_config):
     result = runner.invoke(app, ["config", "set", "port", "1234"])
     assert result.exit_code == 0
-    assert "Successfully set" in result.stdout
-    assert "1234" in result.stdout
-
-    with open(config_path) as f:
-        data = json.loads(f.read())
-        assert data["port"] == 1234
-
-    result2 = runner.invoke(app, ["config", "show"])
-    assert result2.exit_code == 0
-    assert "port" in result2.stdout
-    assert "1234" in result2.stdout
-
-
-def test_config_set_bool(monkeypatch, tmp_path):
-    config_path = tmp_path / "kritamcp_config.json"
-    monkeypatch.setattr(config_cli, "CONFIG_PATH", str(config_path))
-
-    result = runner.invoke(app, ["config", "set", "some_flag", "true"])
-    assert result.exit_code == 0
-
-    with open(config_path) as f:
-        data = json.loads(f.read())
-        assert data["some_flag"] is True
-
-
-def test_config_read_error(monkeypatch, tmp_path):
-    config_path = tmp_path / "kritamcp_config.json"
-    config_path.write_text("{invalid json]")
-    monkeypatch.setattr(config_cli, "CONFIG_PATH", str(config_path))
+    assert "Set port = 1234" in result.stdout
 
     result = runner.invoke(app, ["config", "show"])
     assert result.exit_code == 0
-    assert "Error reading config" in result.stdout
+    assert "1234" in result.stdout
 
 
-def test_config_write_error(monkeypatch):
-    monkeypatch.setattr(config_cli, "CONFIG_PATH", "/this/path/does/not/exist/config.json")
-
-    result = runner.invoke(app, ["config", "set", "a", "b"])
+def test_config_reset(mock_config):
+    runner.invoke(app, ["config", "set", "port", "1234"])
+    result = runner.invoke(app, ["config", "reset"])
     assert result.exit_code == 0
-    assert "Error writing config" in result.stdout
+    assert "reset to defaults" in result.stdout
+
+    result = runner.invoke(app, ["config", "show"])
+    assert "5678" in result.stdout
+
+
+def test_config_set_invalid_key(mock_config):
+    result = runner.invoke(app, ["config", "set", "invalid_key", "value"])
+    assert result.exit_code == 1
+    assert "Unknown config key" in result.stdout

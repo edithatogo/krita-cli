@@ -32,7 +32,7 @@ def test_schema_has_component_schemas() -> None:
     schemas = schema["components"]["schemas"]
     assert "NewCanvasParams" in schemas
     assert "StrokeParams" in schemas
-    assert "BatchParams" in schemas
+    assert "BatchRequest" in schemas
 
 
 def test_custom_title_and_version() -> None:

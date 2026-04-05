@@ -145,7 +145,7 @@ def replay(
         raise typer.Exit(code=1)
 
 
-@app.command("clear")
+@app.command("history-clear")
 def clear_cmd() -> None:
     """Clear the in-memory command history."""
     clear_history()

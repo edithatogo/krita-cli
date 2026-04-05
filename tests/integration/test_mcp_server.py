@@ -169,7 +169,7 @@ def test_krita_open_file_success() -> None:
 def test_krita_batch_success() -> None:
     with patch("krita_mcp.server._get_client") as mock_get:
         mock_client = mock_get.return_value
-        mock_client.batch.return_value = {
+        mock_client.batch_execute.return_value = {
             "status": "ok",
             "results": [
                 {"action": "set_color", "status": "ok", "result": {"status": "ok"}},
@@ -184,7 +184,7 @@ def test_krita_batch_success() -> None:
 def test_krita_batch_with_errors() -> None:
     with patch("krita_mcp.server._get_client") as mock_get:
         mock_client = mock_get.return_value
-        mock_client.batch.return_value = {
+        mock_client.batch_execute.return_value = {
             "status": "error",
             "results": [
                 {"action": "set_color", "status": "ok", "result": {"status": "ok"}},
@@ -200,7 +200,7 @@ def test_krita_batch_with_errors() -> None:
 def test_krita_batch_stop_on_error() -> None:
     with patch("krita_mcp.server._get_client") as mock_get:
         mock_client = mock_get.return_value
-        mock_client.batch.return_value = {
+        mock_client.batch_execute.return_value = {
             "status": "error",
             "results": [
                 {"action": "set_color", "status": "error", "error": "No active view"},

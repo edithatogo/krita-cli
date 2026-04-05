@@ -42,3 +42,12 @@ class ClientConfig(BaseSettings):
 
     canvas_output_dir: str = "~/krita-mcp-output"
     """Default directory for canvas exports."""
+
+    max_commands_per_minute: int = 60
+    """Maximum commands per minute before rate limiting kicks in."""
+
+    max_batch_size: int = 50
+    """Maximum number of commands allowed in a single batch request."""
+
+    max_layers: int = 100
+    """Maximum number of layers per document to prevent OOM."""

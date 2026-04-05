@@ -33,6 +33,9 @@ def test_error_code_values() -> None:
         "UNKNOWN_ACTION",
         "INTERNAL_ERROR",
         "INCOMPATIBLE_PROTOCOL",
+        "RATE_LIMIT_EXCEEDED",
+        "BATCH_SIZE_EXCEEDED",
+        "LAYER_LIMIT_EXCEEDED",
     }
     assert {e.value for e in ErrorCode} == expected
 
@@ -132,6 +135,9 @@ def test_command_error_with_timeout_code() -> None:
         ErrorCode.UNKNOWN_ACTION,
         ErrorCode.INTERNAL_ERROR,
         ErrorCode.INCOMPATIBLE_PROTOCOL,
+        ErrorCode.RATE_LIMIT_EXCEEDED,
+        ErrorCode.BATCH_SIZE_EXCEEDED,
+        ErrorCode.LAYER_LIMIT_EXCEEDED,
     ],
 )
 def test_all_error_codes_usable_in_krita_error(code: ErrorCode) -> None:
