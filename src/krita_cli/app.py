@@ -89,6 +89,9 @@ from krita_cli.commands import (
     navigation as _navigation,
 )
 from krita_cli.commands import (
+    replay as _replay,
+)
+from krita_cli.commands import (
     rollback as _rollback,
 )
 from krita_cli.commands import (
@@ -111,6 +114,7 @@ app.add_typer(_history_cmd.app)
 app.add_typer(_batch.app)
 app.add_typer(_rollback.app)
 app.add_typer(_introspect.app)
+app.add_typer(_replay.app)
 app.add_typer(_selection.app)
 
 # Re-export command functions for backward compatibility (cli.py shim)
