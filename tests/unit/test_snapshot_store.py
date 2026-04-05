@@ -1,14 +1,27 @@
 """Unit tests for the BatchSnapshotStore."""
 
-from __future__ import annotations
+import sys
+from unittest.mock import MagicMock
+
+# Mock krita and PyQt5 before importing kritamcp submodules
+mock_krita = MagicMock()
+mock_krita.Krita = MagicMock()
+mock_krita.Extension = MagicMock
+sys.modules["krita"] = mock_krita
+
+mock_qt = MagicMock()
+sys.modules["PyQt5"] = mock_qt
+sys.modules["PyQt5.QtCore"] = MagicMock()
+sys.modules["PyQt5.QtGui"] = MagicMock()
+
+# Import snapshot_store after mocking
+from kritamcp.snapshot_store import BatchSnapshotStore
 
 import os
 import tempfile
 import shutil
 from pathlib import Path
-
 import pytest
-from snapshot_store import BatchSnapshotStore
 
 
 @pytest.fixture

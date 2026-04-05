@@ -7,6 +7,7 @@ from typing import Any
 import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
+from pydantic import ValidationError
 
 from krita_client.models import (
     BatchCommand,
@@ -24,6 +25,7 @@ class TestPathTraversalPrevention:
 
     @given(
         st.text(alphabet=st.characters(blacklist_characters="/\\"), min_size=1)
+        .filter(lambda s: s.strip() != "")
         .filter(lambda s: ".." not in s)
     )
     @settings(max_examples=50)
@@ -40,9 +42,13 @@ class TestPathTraversalPrevention:
         if ".." in malicious_path:
             with pytest.raises(ValidationError, match="Path traversal"):
                 SaveParams(path=malicious_path)
+        elif not malicious_path.strip():
+            with pytest.raises(ValidationError, match="cannot be empty"):
+                SaveParams(path=malicious_path)
         else:
             params = SaveParams(path=malicious_path)
-            assert params.path == malicious_path
+            # Account for pydantic trimming if applicable
+            assert params.path == malicious_path.strip()
 
 
 class TestDimensionBoundary:

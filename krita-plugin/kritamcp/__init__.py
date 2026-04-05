@@ -20,12 +20,14 @@ import json
 import logging
 import math
 import os
+import sys
 import threading
 import uuid
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any
 
 from krita import *
+import sys
 from PyQt5.QtCore import QThread, QTimer
 from PyQt5.QtGui import QColor
 
@@ -1399,4 +1401,9 @@ class KritaMCPExtension(Extension):
 
 
 # Register the extension
-Krita.instance().addExtension(KritaMCPExtension(Krita.instance()))
+if __name__ != "builtins" and "pytest" not in sys.modules:
+    try:
+        Krita.instance().addExtension(KritaMCPExtension(Krita.instance()))
+    except (NameError, AttributeError):
+        # Krita not defined or instance() not available
+        pass
