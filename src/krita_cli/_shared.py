@@ -2,16 +2,13 @@
 
 from __future__ import annotations
 
-import json
 from contextlib import contextmanager
-from pathlib import Path
 from typing import Any
 
 import typer
 from rich.console import Console
 from typer import Context
 
-from krita_cli import history
 from krita_client import (
     ClientConfig,
     ErrorCode,
@@ -27,7 +24,6 @@ class CLIState:
 
     def __init__(self) -> None:
         self.url: str | None = None
-        self.record: str | None = None
 
 
 def _handle_error(exc: KritaError) -> None:
@@ -68,16 +64,13 @@ def _handle_errors() -> Any:
         _handle_error(exc)
 
 
-def _get_client(ctx: Context) -> KritaClient | _RecordingClient:
+def _get_client(ctx: Context) -> KritaClient:
     """Create a Krita client from the Typer context."""
     state: CLIState = ctx.obj or CLIState()
     config = ClientConfig()
     if state.url is not None:
         config = ClientConfig(url=state.url)
-    client = KritaClient(config)
-
-    # Always wrap in RecordingClient to enable systemic history logging
-    return _RecordingClient(client, ctx)
+    return KritaClient(config)
 
 
 def _format_result(result: dict[str, object]) -> None:
@@ -95,73 +88,3 @@ def _print_result(result: dict[str, object], message: str) -> None:
     """Display a command result with a custom message."""
     console.print(f"[green]{message}[/green]")
     _format_result(result)
-
-
-# -- Command history integration ----------------------------------------------
-
-_history: list[dict[str, Any]] = []
-
-
-def _record_command(action: str, params: dict[str, object] | None, result: dict[str, object] | None) -> None:
-    """Record a command to the in-memory history and optionally to a file."""
-    entry: dict[str, Any] = {
-        "action": action,
-        "params": params or {},
-        "result": result,
-    }
-    _history.append(entry)
-
-
-def get_history() -> list[dict[str, Any]]:
-    """Return the current command history."""
-    return list(_history)
-
-
-def clear_history() -> None:
-    """Clear the in-memory history."""
-    _history.clear()
-
-
-class _RecordingClient:
-    """Thin wrapper around KritaClient that records command invocations."""
-
-    def __init__(self, client: KritaClient, ctx: Context) -> None:
-        self._client = client
-        self._ctx = ctx
-
-    def __getattr__(self, name: str) -> Any:
-        attr = getattr(self._client, name)
-        if not callable(attr):
-            return attr
-
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            action = name
-            params = dict(kwargs)
-            try:
-                result = attr(*args, **kwargs)
-                history.record_command(action, params, result)
-                return result
-            except Exception as exc:
-                history.record_command(action, params, {"status": "error", "error": str(exc)})
-                raise
-
-        return wrapper
-
-
-def _maybe_record(
-    ctx: Context, action: str, params: dict[str, object] | None, result: dict[str, object] | None
-) -> None:
-    """Record a command if --record is set on the context."""
-    state: CLIState | None = getattr(ctx, "obj", None)
-    if state is None:
-        return
-    record_path = getattr(state, "record", None)
-    if record_path is None:
-        return
-
-    _record_command(action, params, result)
-
-    if record_path:
-        path = Path(record_path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(_history, indent=2))

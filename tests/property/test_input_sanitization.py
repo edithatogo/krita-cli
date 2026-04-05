@@ -36,12 +36,11 @@ class TestPathTraversalPrevention:
     @given(st.text(min_size=1))
     @settings(max_examples=50)
     def test_paths_with_traversal_always_fail(self, malicious_path: str) -> None:
-        """Paths containing '..' should be rejected by the plugin."""
-        # Note: The plugin checks this, not the client model.
-        # We test that the client model passes through the path unchanged
-        # so the plugin can perform its own validation.
+        """Paths containing '..' should be rejected by the model."""
         if ".." in malicious_path:
-            # Model should accept the path (plugin does the real validation)
+            with pytest.raises(ValidationError, match="Path traversal"):
+                SaveParams(path=malicious_path)
+        else:
             params = SaveParams(path=malicious_path)
             assert params.path == malicious_path
 

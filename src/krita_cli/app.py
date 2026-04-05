@@ -42,15 +42,10 @@ def callback(
         str | None,
         typer.Option("--url", "-u", help="Krita plugin URL (overrides KRITA_URL env var)"),
     ] = None,
-    record: Annotated[
-        str | None,
-        typer.Option("--record", "-r", help="Record commands to a JSON file"),
-    ] = None,
 ) -> None:
     """Krita CLI — programmatic painting in Krita."""
     ctx.obj = CLIState()
     ctx.obj.url = url
-    ctx.obj.record = record
 
 
 # -- Register sub-apps --------------------------------------------------------
@@ -75,9 +70,6 @@ from krita_cli.commands import (
 )
 from krita_cli.commands import (
     health as _health,
-)
-from krita_cli.commands import (
-    history as _history,
 )
 from krita_cli.commands import (
     history_cmd as _history_cmd,
@@ -109,7 +101,6 @@ app.add_typer(_navigation.app)
 app.add_typer(_file_ops.app)
 app.add_typer(_health.app)
 app.add_typer(_call.app)
-app.add_typer(_history.app)
 app.add_typer(_history_cmd.app)
 app.add_typer(_batch.app)
 app.add_typer(_rollback.app)

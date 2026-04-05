@@ -22,7 +22,7 @@ app = typer.Typer()
 def history(
     ctx: Context,
     limit: Annotated[int, typer.Option("--limit", "-n", help="Number of history entries to show")] = 20,
-    as_json: Annotated[bool, typer.Option("--json", "-j", help="Output as raw JSON")] = False,
+    as_json: Annotated[bool, typer.Option("--json", "-j", help="Output as raw JSON")] = False,  # noqa: FBT002
 ) -> None:
     """View recent command execution history."""
     try:
