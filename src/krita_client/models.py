@@ -32,6 +32,8 @@ class ErrorCode(str, Enum):
     RATE_LIMIT_EXCEEDED = "RATE_LIMIT_EXCEEDED"
     BATCH_SIZE_EXCEEDED = "BATCH_SIZE_EXCEEDED"
     LAYER_LIMIT_EXCEEDED = "LAYER_LIMIT_EXCEEDED"
+    ROLLBACK_NOT_POSSIBLE = "ROLLBACK_NOT_POSSIBLE"
+    BATCH_NOT_FOUND = "BATCH_NOT_FOUND"
 
 
 class KritaErrorResponse(BaseModel):
@@ -297,6 +299,40 @@ class BatchResponse(BaseModel):
     status: Literal["ok", "error", "partial"]
     results: list[BatchCommandResult]
     count: int
+    batch_id: str | None = None
+
+
+class RollbackParams(BaseModel):
+    """Parameters for rolling back a batch."""
+
+    batch_id: str
+
+
+class RollbackResponse(BaseModel):
+    """Response for a rollback operation."""
+
+    status: Literal["ok", "error"]
+    message: str | None = None
+
+
+# -- History models -----------------------------------------------------------
+
+
+class CommandHistoryRecord(BaseModel):
+    """A single command execution record in the history log."""
+
+    action: str
+    params: dict[str, Any] = {}
+    timestamp: float
+    status: Literal["ok", "error"]
+    duration_ms: float
+    error: str | None = None
+
+
+class GetCommandHistoryParams(BaseModel):
+    """Parameters for getting command history."""
+
+    limit: Annotated[int, Field(ge=1, le=500)] = 20
 
 
 # -- Command registry ---------------------------------------------------------
@@ -317,6 +353,7 @@ COMMAND_MODELS: dict[str, type[BaseModel]] = {
     "list_brushes": ListBrushesParams,
     "open_file": OpenFileParams,
     "batch": BatchRequest,
+    "rollback": RollbackParams,
     "list_layers": ListLayersParams,
     "create_layer": CreateLayerParams,
     "select_layer": SelectLayerParams,
@@ -331,4 +368,5 @@ COMMAND_MODELS: dict[str, type[BaseModel]] = {
     "clear_selection": ClearSelectionParams,
     "fill_selection": FillSelectionParams,
     "deselect": DeselectParams,
+    "get_command_history": GetCommandHistoryParams,
 }

@@ -21,6 +21,7 @@ import logging
 import math
 import os
 import threading
+import uuid
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any
 
@@ -29,6 +30,8 @@ from PyQt5.QtCore import QThread, QTimer
 from PyQt5.QtGui import QColor
 
 from kritamcp.rate_limiter import RateLimiter
+from kritamcp.history_store import CommandHistoryStore
+from kritamcp.snapshot_store import BatchSnapshotStore
 
 # Try to import numpy for accelerated rendering
 try:
@@ -147,6 +150,7 @@ class CommandQueue:
 command_queue = CommandQueue()
 _command_counter = itertools.count(1)
 rate_limiter = RateLimiter()
+history_store = CommandHistoryStore(max_size=100)
 
 
 def _next_command_id() -> int:
@@ -295,6 +299,7 @@ class KritaMCPExtension(Extension):
         self.timer: QTimer | None = None
         self.current_brush_size: int = 20
         self.current_opacity: float = 1.0
+        self.snapshot_store = BatchSnapshotStore()
 
         # Load configuration
         self.config_path = os.path.expanduser("~/.kritamcp_config.json")
@@ -302,7 +307,7 @@ class KritaMCPExtension(Extension):
 
     def load_config(self) -> None:
         """Load configuration from ~/.krita-cli/config.json first, then fallback to ~/.kritamcp_config.json."""
-        global SERVER_PORT, CANVAS_OUTPUT_DIR, MAX_CANVAS_DIM
+        global SERVER_PORT, CANVAS_OUTPUT_DIR, MAX_CANVAS_DIM, MAX_BATCH_SIZE, MAX_LAYERS
         # Try the new krita-cli config location first
         krita_cli_config = os.path.expanduser("~/.krita-cli/config.json")
         if os.path.exists(krita_cli_config):
@@ -314,6 +319,9 @@ class KritaMCPExtension(Extension):
                         "canvas_output_dir", os.path.expanduser(config.get("canvas_output_dir", CANVAS_OUTPUT_DIR))
                     )
                     MAX_CANVAS_DIM = config.get("max_canvas_dim", MAX_CANVAS_DIM)
+                    MAX_BATCH_SIZE = config.get("max_batch_size", MAX_BATCH_SIZE)
+                    MAX_LAYERS = config.get("max_layers", MAX_LAYERS)
+                    rate_limiter.max_commands = config.get("max_commands_per_minute", rate_limiter.max_commands)
                     logger.info("Loaded config from %s", krita_cli_config)
                     return
             except Exception as e:
@@ -375,6 +383,8 @@ class KritaMCPExtension(Extension):
 
     def execute_command(self, command: dict[str, Any]) -> dict[str, Any]:
         """Execute a paint command and return result."""
+        import time
+
         action = command.get("action")
         params = command.get("params", {})
 
@@ -409,12 +419,31 @@ class KritaMCPExtension(Extension):
             "fill_selection": self.cmd_fill_selection,
             "deselect": self.cmd_deselect,
             "invert_selection": self.cmd_invert_selection,
+            "get_command_history": self.cmd_get_command_history,
+            "rollback": self.cmd_rollback,
         }
 
         handler = handlers.get(action)
         if handler is None:
             return make_error(f"Unknown action: {action}", code="UNKNOWN_ACTION", recoverable=False)
-        return handler(params)
+
+        start = time.monotonic()
+        result = handler(params)
+        duration_ms = (time.monotonic() - start) * 1000
+
+        # Record command in history (skip history queries to avoid recursion)
+        if action != "get_command_history":
+            status = "error" if "error" in result else "ok"
+            history_store.add({
+                "action": action,
+                "params": params,
+                "timestamp": time.time(),
+                "status": status,
+                "duration_ms": round(duration_ms, 2),
+                "error": result.get("error", {}).get("message") if status == "error" else None,
+            })
+
+        return result
 
     # -- Canvas & State Introspection -----------------------------------------
 
@@ -661,6 +690,12 @@ class KritaMCPExtension(Extension):
         doc.setSelection(None)
         doc.refreshProjection()
         return {"status": "ok"}
+
+    def cmd_get_command_history(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Return recent command execution history."""
+        limit = params.get("limit", 20)
+        records = history_store.query(limit=limit)
+        return {"status": "ok", "history": records, "count": len(records)}
 
     def cmd_open_file(self, params: dict[str, Any]) -> dict[str, Any]:
         pass
@@ -1265,6 +1300,16 @@ class KritaMCPExtension(Extension):
         stop_on_error = params.get("stop_on_error", False)
         results: list[dict[str, Any]] = []
 
+        # Take snapshot before batch for potential rollback
+        doc = self.get_active_document()
+        batch_id = None
+        if doc:
+            snapshot_path = os.path.join(self.snapshot_store.snapshot_dir, f"before_{uuid.uuid4()}.png")
+            doc.setBatchmode(True)
+            doc.exportImage(snapshot_path, InfoObject())
+            doc.setBatchmode(False)
+            batch_id = self.snapshot_store.create_snapshot(commands, snapshot_path)
+
         ok_count = 0
         err_count = 0
 
@@ -1292,12 +1337,65 @@ class KritaMCPExtension(Extension):
             status = "partial"
         elif err_count > 0:
             status = "error"
-            
-        return {
+
+        response = {
             "status": status,
             "results": results,
             "count": len(results),
         }
+        if batch_id:
+            response["batch_id"] = batch_id
+
+        return response
+
+    def cmd_rollback(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Roll back a batch execution using a snapshot."""
+        batch_id = params.get("batch_id")
+        if not batch_id:
+            return make_error("Missing batch_id", code="INVALID_PARAMETERS", recoverable=True)
+
+        snapshot = self.snapshot_store.get_snapshot(batch_id)
+        if not snapshot:
+            return make_error(f"Batch snapshot not found: {batch_id}", code="BATCH_NOT_FOUND", recoverable=True)
+
+        doc = self.get_active_document()
+        if not doc:
+            return make_error("No active document", code="NO_ACTIVE_DOCUMENT", recoverable=True)
+
+        from PyQt5.QtGui import QImage
+
+        qimg = QImage(snapshot.canvas_before_path)
+        if qimg.isNull():
+            return make_error("Failed to load snapshot image", code="INTERNAL_ERROR", recoverable=False)
+
+        # SECURITY/VALIDATION: Check if canvas state has changed (dimensions check as proxy)
+        if qimg.width() != doc.width() or qimg.height() != doc.height():
+            return make_error(
+                "Canvas dimensions have changed since batch execution. Rollback not possible.",
+                code="ROLLBACK_NOT_POSSIBLE",
+                recoverable=False,
+            )
+
+        # Restore state: Create a new layer with the snapshot image
+        # This is a safe way to 'rollback' the visual state.
+        layer_name = f"Rollback_{batch_id[:8]}"
+        new_layer = doc.createNode(layer_name, "paintlayer")
+        doc.rootNode().addChildNode(new_layer, None)
+
+        # Convert QImage to pixel data (BGRA)
+        # Krita uses BGRA8
+        ptr = qimg.bits()
+        ptr.setsize(qimg.byteCount())
+        pixel_data = bytes(ptr)
+
+        new_layer.setPixelData(pixel_data, 0, 0, qimg.width(), qimg.height())
+        doc.setActiveNode(new_layer)
+        doc.refreshProjection()
+
+        # Remove the snapshot from store after successful rollback
+        self.snapshot_store.remove_snapshot(batch_id)
+
+        return {"status": "ok", "message": f"Rolled back batch {batch_id}. Restored to new layer '{layer_name}'."}
 
 
 # Register the extension

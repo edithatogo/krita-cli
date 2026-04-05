@@ -390,6 +390,11 @@ def krita_batch(
         ok = sum(1 for r in results if r.get("status") == "ok")
         errs = sum(1 for r in results if r.get("status") == "error")
         summary = f"Batch: {ok} succeeded, {errs} failed out of {len(results)}"
+        
+        batch_id = result.get("batch_id")
+        if batch_id:
+            summary += f" (Batch ID: {batch_id})"
+
         if errs > 0:
             error_details = []
             for r in results:
@@ -411,6 +416,59 @@ def krita_batch(
                     error_details.append(f"  - {r.get('action')}: {err_msg}")
             summary += "\nErrors:\n" + "\n".join(error_details)
         return summary
+    except KritaError as exc:
+        return _format_error(exc)
+
+
+@mcp.tool()
+def krita_rollback(
+    batch_id: str,
+) -> str:
+    """Roll back a previously executed batch operation.
+
+    This restores the canvas state to what it was before the batch started.
+    Note: Snapshots are lost if the Krita plugin is restarted.
+
+    Args:
+        batch_id: The unique ID returned by a previous krita_batch call.
+    """
+    try:
+        client = _get_client()
+        result = client.rollback(batch_id=batch_id)
+        if "error" in result:
+            return f"Error: {result['error']}"
+        msg = result.get("message", "Rollback successful")
+        return f"Rollback complete: {msg}"
+    except KritaError as exc:
+        return _format_error(exc)
+
+
+@mcp.tool()
+def krita_get_command_history(
+    limit: int = 20,
+) -> str:
+    """Get recent command execution history.
+
+    Args:
+        limit: Number of history entries to return (default 20)
+    """
+    try:
+        client = _get_client()
+        result = client.get_command_history(limit=limit)
+        records = result.get("history", [])
+        if not records:
+            return "No command history recorded."
+        lines = [f"Command History ({len(records)} entries):"]
+        for i, rec in enumerate(records, 1):
+            status = rec.get("status", "?")
+            action = rec.get("action", "?")
+            duration = rec.get("duration_ms", 0)
+            error = rec.get("error", "")
+            line = f"  {i}. {action} — {status} ({duration:.1f}ms)"
+            if error:
+                line += f" — {error}"
+            lines.append(line)
+        return "\n".join(lines)
     except KritaError as exc:
         return _format_error(exc)
 

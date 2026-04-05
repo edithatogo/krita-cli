@@ -59,6 +59,9 @@ from krita_cli.commands import (
     batch as _batch,
 )
 from krita_cli.commands import (
+    rollback as _rollback,
+)
+from krita_cli.commands import (
     brush as _brush,
 )
 from krita_cli.commands import (
@@ -78,6 +81,9 @@ from krita_cli.commands import (
 )
 from krita_cli.commands import (
     history as _history,
+)
+from krita_cli.commands import (
+    history_cmd as _history_cmd,
 )
 from krita_cli.commands import (
     introspect as _introspect,
@@ -101,7 +107,9 @@ app.add_typer(_file_ops.app)
 app.add_typer(_health.app)
 app.add_typer(_call.app)
 app.add_typer(_history.app)
+app.add_typer(_history_cmd.app)
 app.add_typer(_batch.app)
+app.add_typer(_rollback.app)
 app.add_typer(_introspect.app)
 app.add_typer(_selection.app)
 

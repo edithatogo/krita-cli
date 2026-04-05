@@ -30,6 +30,7 @@ from krita_client.models import (
     SetLayerOpacityParams,
     SetLayerVisibilityParams,
     StrokeParams,
+    RollbackParams,
 )
 
 if TYPE_CHECKING:
@@ -358,6 +359,24 @@ class KritaClient:
     def batch(self, commands: list[dict[str, object]], *, stop_on_error: bool = False) -> dict[str, object]:
         """Execute multiple commands in a single batch (alias for batch_execute)."""
         return self.batch_execute(commands, stop_on_error=stop_on_error)
+
+    def get_command_history(self, *, limit: int = 20) -> dict[str, object]:
+        """Retrieve recent command execution history."""
+        return self._send("get_command_history", {"limit": limit})
+
+    def rollback(self, batch_id: str) -> dict[str, object]:
+        """Roll back a batch execution.
+
+        Args:
+            batch_id: The unique ID of the batch to roll back.
+
+        Returns:
+            Dict with keys:
+            - "status": "ok" or "error"
+            - "message": Optional error message
+        """
+        validated = self._validate(RollbackParams, {"batch_id": batch_id})
+        return self._send("rollback", validated)
 
     def get_canvas_info(self) -> dict[str, object]:
         """Get information about the current canvas."""
