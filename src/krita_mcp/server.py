@@ -385,23 +385,30 @@ def krita_batch(
     """
     try:
         client = _get_client()
-        result = client.batch(commands, stop_on_error=stop_on_error)
-        # type: ignore[assignment]
+        result = client.batch_execute(commands, stop_on_error=stop_on_error)
         results = result.get("results", [])
-        ok = sum(1 for r in results if r.get("status") == "ok")  # ty:ignore[not-iterable]
-        errs = sum(1 for r in results if r.get("status") == "error")  # ty:ignore[not-iterable]
-        summary = f"Batch: {ok} succeeded, {errs} failed out of {len(results)}"  # ty:ignore[invalid-argument-type]
+        ok = sum(1 for r in results if r.get("status") == "ok")
+        errs = sum(1 for r in results if r.get("status") == "error")
+        summary = f"Batch: {ok} succeeded, {errs} failed out of {len(results)}"
         if errs > 0:
             error_details = []
-            for r in results:  # ty:ignore[not-iterable]
+            for r in results:
                 if r.get("status") == "error":
-                    err_msg = r.get("error", "unknown")
-                    result_data = r.get("result", {})  # type: ignore[assignment]
-                    if isinstance(result_data, dict) and "error" in result_data:
-                        err_info = result_data["error"]  # type: ignore[index]
-                        if isinstance(err_info, dict):
-                            err_msg = err_info.get("message", str(err_info))  # type: ignore[union-attr]
-                    error_details.append(f"  - {r.get('action')}: {err_msg}")  # type: ignore[union-attr]
+                    # Try to get error from top level first, then from nested result
+                    err_msg = r.get("error")
+                    if not err_msg:
+                        result_data = r.get("result", {})
+                        if isinstance(result_data, dict) and "error" in result_data:
+                            err_info = result_data["error"]
+                            if isinstance(err_info, dict):
+                                err_msg = err_info.get("message", str(err_info))
+                            else:
+                                err_msg = str(err_info)
+                    
+                    if not err_msg:
+                        err_msg = "unknown"
+                        
+                    error_details.append(f"  - {r.get('action')}: {err_msg}")
             summary += "\nErrors:\n" + "\n".join(error_details)
         return summary
     except KritaError as exc:

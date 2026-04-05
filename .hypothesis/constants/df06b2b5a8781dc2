@@ -1,0 +1,4 @@
+# file: C:\Users\60217257\repos\krita-cli\krita-mcp\src\krita_cli\config_cmd.py
+# hypothesis_version: 6.151.10
+
+[30.0, 120.0, 5678, '.krita-cli', 'canvas_output_dir', 'config.json', 'default_timeout', 'export_timeout', 'port', 'utf-8', '~/krita-mcp-output']

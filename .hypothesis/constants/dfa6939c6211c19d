@@ -1,0 +1,4 @@
+# file: C:\Users\60217257\repos\krita-cli\krita-mcp\src\krita_client\schema.py
+# hypothesis_version: 6.151.10
+
+['$ref', '/health', '0.1.0', '200', '3.1.0', '500', 'Health check', 'Krita MCP Plugin API', 'Plugin is running', 'action', 'application/json', 'components', 'const', 'content', 'description', 'error', 'get', 'info', 'object', 'openapi', 'params', 'paths', 'plugin', 'post', 'properties', 'requestBody', 'required', 'responses', 'schema', 'schemas', 'status', 'string', 'summary', 'title', 'type', 'version']

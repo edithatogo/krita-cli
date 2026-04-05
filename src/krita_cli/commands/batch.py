@@ -51,7 +51,7 @@ def batch(
 
     try:
         client = _shared._get_client(ctx)
-        result = client.batch(commands, stop_on_error=stop_on_error)
+        result = client.batch_execute(commands, stop_on_error=stop_on_error)
         console.print(json.dumps(result, indent=2, default=str))
     except KritaError as exc:
         _shared._handle_error(exc)

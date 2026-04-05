@@ -269,10 +269,31 @@ class BatchCommand(BaseModel):
     params: dict[str, Any] = {}
 
 
-class BatchParams(BaseModel):
+class BatchRequest(BaseModel):
     """Parameters for batch execution."""
 
     commands: Annotated[list[BatchCommand], Field(min_length=1)]
+    stop_on_error: bool = False
+
+
+BatchParams = BatchRequest
+
+
+class BatchCommandResult(BaseModel):
+    """Result of a single command within a batch."""
+
+    action: str
+    status: Literal["ok", "error"]
+    result: dict[str, Any] | None = None
+    error: str | None = None
+
+
+class BatchResponse(BaseModel):
+    """Response for a batch execution."""
+
+    status: Literal["ok", "error", "partial"]
+    results: list[BatchCommandResult]
+    count: int
 
 
 # -- Command registry ---------------------------------------------------------
@@ -292,7 +313,7 @@ COMMAND_MODELS: dict[str, type[BaseModel]] = {
     "get_color_at": GetColorAtParams,
     "list_brushes": ListBrushesParams,
     "open_file": OpenFileParams,
-    "batch": BatchParams,
+    "batch": BatchRequest,
     "list_layers": ListLayersParams,
     "create_layer": CreateLayerParams,
     "select_layer": SelectLayerParams,

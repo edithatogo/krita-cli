@@ -339,11 +339,14 @@ class KritaClient:
         validated = self._validate(OpenFileParams, {"path": path})
         return self._send("open_file", validated)
 
-    def batch(self, commands: list[dict[str, object]], *, stop_on_error: bool = False) -> dict[str, object]:
+    def batch_execute(self, commands: list[dict[str, object]], *, stop_on_error: bool = False) -> dict[str, object]:
         """Execute multiple commands in a single batch."""
-        validated = self._validate(BatchParams, {"commands": commands})
-        payload: dict[str, object] = {**validated, "stop_on_error": stop_on_error}
-        return self._send("batch", payload)
+        validated = self._validate(BatchParams, {"commands": commands, "stop_on_error": stop_on_error})
+        return self._send("batch", validated)
+
+    def batch(self, commands: list[dict[str, object]], *, stop_on_error: bool = False) -> dict[str, object]:
+        """Execute multiple commands in a single batch (alias for batch_execute)."""
+        return self.batch_execute(commands, stop_on_error=stop_on_error)
 
     def get_canvas_info(self) -> dict[str, object]:
         """Get information about the current canvas."""
