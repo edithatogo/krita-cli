@@ -1,0 +1,244 @@
+[project]
+name = "krita-cli"
+version = "0.1.0"
+description = "SOTA CLI + MCP server for programmatic painting in Krita"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12"
+authors = [
+    { name = "Krita MCP Contributors" },
+]
+keywords = ["krita", "mcp", "cli", "painting", "ai", "automation"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Typing :: Typed",
+]
+
+dependencies = [
+    "fastmcp>=3.2.0",
+    "httpx>=0.28.1",
+    "pydantic>=2.12.5",
+    "pydantic-settings>=2.13.1",
+    "rich>=14.3.3",
+    "typer>=0.24.1",
+]
+
+[project.urls]
+Homepage = "https://github.com/yourusername/krita-cli"
+Repository = "https://github.com/yourusername/krita-cli"
+Issues = "https://github.com/yourusername/krita-cli/issues"
+
+[project.scripts]
+krita = "krita_cli.cli:app"
+
+[project.optional-dependencies]
+numpy = ["numpy>=1.26.0"]
+dev = [
+    "beartype>=0.18.0",
+]
+
+[dependency-groups]
+dev = [
+    "hypothesis>=6.151.10",
+    "mutmut>=3.5.0",
+    "pre-commit>=4.5.1",
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+    "pytest-cov>=7.1.0",
+    "pytest-httpx>=0.36.0",
+    "pytest-xdist>=3.8.0",
+    "python-semantic-release>=9.21.1",
+    "ruff>=0.15.9",
+    "scalene>=2.2.1",
+    "ty>=0.0.28",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/krita_client", "src/krita_mcp", "src/krita_cli"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort
+    "B",      # flake8-bugbear
+    "UP",     # pyupgrade
+    "C4",     # flake8-comprehensions
+    "SIM",    # flake8-simplify
+    "S",      # flake8-bandit (security)
+    "N",      # pep8-naming
+    "RUF",    # ruff-specific rules
+    "A",      # flake8-builtins
+    "BLE",    # flake8-blind-except
+    "DTZ",    # flake8-datetimez
+    "EM",     # flake8-errmsg
+    "EXE",    # flake8-executable
+    "FBT",    # flake8-boolean-trap
+    "ICN",    # flake8-import-conventions
+    "INP",    # flake8-no-pep420
+    "INT",    # flake8-gettext
+    "ISC",    # flake8-implicit-str-concat
+    "NPY",    # numpy rules
+    "PD",     # pandas-vet
+    "PGH",    # pygrep-hooks
+    "PIE",    # flake8-pie
+    "PL",     # pylint
+    "PT",     # flake8-pytest-style
+    "PTH",    # flake8-use-pathlib
+    "PYI",    # flake8-pyi
+    "Q",      # flake8-quotes
+    "RET",    # flake8-return
+    "RSE",    # flake8-raise
+    "SLOT",   # flake8-slots
+    "T10",    # flake8-debugger
+    "TCH",    # flake8-type-checking
+    "TID",    # flake8-tidy-imports
+    "TRY",    # tryceratops
+]
+ignore = [
+    "S101",   # assert used (allowed in tests)
+    "S603",   # subprocess call (needed for CLI)
+    "TRY003", # long exception messages (too noisy)
+    "PLR0913", # too many arguments (common in API functions)
+    "PLR2004", # magic value comparison
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*" = [
+    "S101",   # assert allowed in tests
+    "S105",   # hardcoded passwords (test fixtures)
+    "S106",   # hardcoded passwords (test fixtures)
+    "S108",   # /tmp/ paths are fine for test fixtures
+    "S311",   # pseudo-random generators (test fixtures)
+    "PLR2004", # magic values (test assertions)
+    "PLC0415", # local imports in tests are acceptable
+    "PT011",   # pytest.raises too broad
+    "PT012",   # pytest.raises with multiple statements
+    "FBT001", # boolean params are natural for property-based tests
+]
+"src/krita_client/models.py" = [
+    "RUF012", # mutable class attributes (pydantic models)
+]
+"src/krita_mcp/server.py" = [
+    "TRY300", # try/else pattern is standard for MCP tool error handling
+    "FBT001", # boolean params are natural for MCP tools
+    "FBT002", # boolean defaults are natural for MCP tools
+    "PLW0603", # global singleton pattern is appropriate here
+    "A002",   # filter param matches MCP client API
+]
+"types/**/*.pyi" = [
+    "N802",   # function names must match Krita's camelCase API
+    "N803",   # argument names must match Krita's camelCase API
+    "PYI021", # docstrings allowed in stubs for documentation
+    "PYI020", # quoted annotations needed for forward references in stubs
+    "UP035",  # typing.Sequence is fine in stubs
+    "UP037",  # quoted annotations needed for forward references in stubs
+    "A002",   # Krita API uses `type` as parameter name
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["krita_client", "krita_mcp", "krita_cli"]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["typer.Argument", "typer.Option", "fastmcp.FastMCP"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.ty.environment]
+python = "./.venv"
+extra-paths = ["src", "types"]
+python-version = "3.12"
+
+[tool.ty.rules]
+unresolved-import = "warn"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+asyncio_mode = "auto"
+addopts = [
+    "--cov=krita_client",
+    "--cov=krita_mcp",
+    "--cov=krita_cli",
+    "--cov-branch",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-fail-under=95",
+    "--strict-markers",
+    "--strict-config",
+    "-n", "auto",
+]
+markers = [
+    "e2e: end-to-end tests requiring Krita",
+    "slow: slow running tests",
+    "integration: integration tests",
+]
+
+[tool.coverage.run]
+source = ["krita_client", "krita_mcp", "krita_cli"]
+branch = true
+parallel = true
+
+[tool.coverage.report]
+fail_under = 100
+show_missing = true
+skip_empty = true
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "@overload",
+    "raise NotImplementedError",
+]
+
+[tool.mutmut]
+paths_to_mutate = "src/"
+backup = false
+runner = "python -m pytest tests/unit/ -x --no-cov"
+tests_dir = "tests/"
+coverage_dir = "htmlcov/"
+coverage_config = "pyproject.toml"
+
+[tool.semantic_release]
+version_toml = ["pyproject.toml:project.version"]
+branch = "main"
+commit_message = "chore(release): {version} [skip ci]"
+commit_parser = "angular"
+logging_use_named_masks = false
+build_command = "uv build"
+upload_to_pypi = true
+upload_to_release = true
+pypi_token = { env = "PYPI_TOKEN" }
+
+[tool.semantic_release.remote]
+type = "github"
+token = { env = "GH_TOKEN" }
+
+[tool.semantic_release.changelog]
+template_dir = "templates"
+changelog_file = "CHANGELOG.md"
+exclude_commit_patterns = []
+
+[tool.semantic_release.publish]
+dist_glob_patterns = ["dist/*"]
+upload_to_vcs_release = true

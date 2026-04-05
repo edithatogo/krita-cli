@@ -1,0 +1,56 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":semanticCommitTypeAll(chore)",
+    ":automergePatch",
+    ":disableRateLimiting"
+  ],
+  "labels": ["dependencies"],
+  "schedule": ["every weekend"],
+  "packageRules": [
+    {
+      "groupName": "dev dependencies",
+      "matchDepTypes": ["devDependencies"],
+      "groupSlug": "dev-dependencies"
+    },
+    {
+      "groupName": "pytest ecosystem",
+      "matchPackagePatterns": ["^pytest"],
+      "groupSlug": "pytest-ecosystem"
+    },
+    {
+      "groupName": "pydantic ecosystem",
+      "matchPackagePatterns": ["^pydantic"],
+      "groupSlug": "pydantic-ecosystem"
+    },
+    {
+      "groupName": "astral ecosystem",
+      "matchPackagePatterns": ["^(ruff|ty)$"],
+      "groupSlug": "astral-ecosystem"
+    },
+    {
+      "groupName": "testing ecosystem",
+      "matchPackagePatterns": ["^(hypothesis|mutmut|scalene)$"],
+      "groupSlug": "testing-ecosystem"
+    },
+    {
+      "description": "Auto-merge patch updates",
+      "matchUpdateTypes": ["patch"],
+      "automerge": true
+    },
+    {
+      "description": "Auto-merge minor updates for dev dependencies",
+      "matchUpdateTypes": ["minor"],
+      "matchDepTypes": ["devDependencies"],
+      "automerge": true
+    }
+  ],
+  "prConcurrentLimit": 5,
+  "prHourlyLimit": 2,
+  "rangeStrategy": "pin",
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["every weekend"]
+  }
+}
