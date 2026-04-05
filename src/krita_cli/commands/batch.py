@@ -52,6 +52,28 @@ def batch(
     try:
         client = _shared._get_client(ctx)
         result = client.batch_execute(commands, stop_on_error=stop_on_error)
-        console.print(json.dumps(result, indent=2, default=str))
+        status = result.get("status", "unknown")
+        ok = sum(1 for r in result.get("results", []) if r.get("status") == "ok")
+        errs = sum(1 for r in result.get("results", []) if r.get("status") == "error")
+        count = result.get("count", 0)
+        color = "green" if status == "ok" else "red" if status == "error" else "yellow"
+        console.print(f"[{color}]Batch: {status}[/{color}]")
+        console.print(f"  {ok} succeeded, {errs} failed out of {count}")
+        batch_id = result.get("batch_id")
+        if batch_id:
+            console.print(f"  Batch ID: [dim]{batch_id}[/dim]")
+        if errs > 0:
+            console.print("[red]Errors:[/red]")
+            for r in result.get("results", []):
+                if r.get("status") == "error":
+                    err_msg = r.get("error")
+                    if not err_msg:
+                        result_data = r.get("result", {})
+                        if isinstance(result_data, dict) and "error" in result_data:
+                            err_info = result_data["error"]
+                            err_msg = err_info.get("message", str(err_info)) if isinstance(err_info, dict) else str(err_info)
+                    if not err_msg:
+                        err_msg = "unknown"
+                    console.print(f"  [red]✗ {r['action']}: {err_msg}[/red]")
     except KritaError as exc:
         _shared._handle_error(exc)

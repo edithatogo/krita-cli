@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from typing import Annotated
 
 import typer
@@ -30,6 +29,11 @@ def rollback(
     try:
         client = _shared._get_client(ctx)
         result = client.rollback(batch_id=batch_id)
-        console.print(json.dumps(result, indent=2, default=str))
+        status = result.get("status", "unknown")
+        msg = result.get("message", "")
+        if status == "ok":
+            console.print(f"[green]Rollback successful: {msg}[/green]")
+        else:
+            console.print(f"[red]Rollback failed: {msg}[/red]")
     except KritaError as exc:
         _shared._handle_error(exc)

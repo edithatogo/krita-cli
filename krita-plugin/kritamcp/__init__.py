@@ -1397,7 +1397,13 @@ class KritaMCPExtension(Extension):
         # Remove the snapshot from store after successful rollback
         self.snapshot_store.remove_snapshot(batch_id)
 
-        return {"status": "ok", "message": f"Rolled back batch {batch_id}. Restored to new layer '{layer_name}'."}
+        return {
+            "status": "ok",
+            "message": (
+                f"Rolled back batch {batch_id}. A new layer '{layer_name}' shows "
+                f"the pre-batch canvas state. Original batch layers remain underneath."
+            ),
+        }
 
 
 # Register the extension

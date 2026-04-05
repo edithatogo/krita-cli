@@ -7,7 +7,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from krita_client.client import KritaClient, KritaCommandError
-from krita_client.models import ErrorCode
 
 
 def test_client_rollback_success() -> None:

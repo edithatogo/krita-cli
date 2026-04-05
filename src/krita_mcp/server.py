@@ -390,7 +390,7 @@ def krita_batch(
         ok = sum(1 for r in results if r.get("status") == "ok")
         errs = sum(1 for r in results if r.get("status") == "error")
         summary = f"Batch: {ok} succeeded, {errs} failed out of {len(results)}"
-        
+
         batch_id = result.get("batch_id")
         if batch_id:
             summary += f" (Batch ID: {batch_id})"
@@ -409,10 +409,10 @@ def krita_batch(
                                 err_msg = err_info.get("message", str(err_info))
                             else:
                                 err_msg = str(err_info)
-                    
+
                     if not err_msg:
                         err_msg = "unknown"
-                        
+
                     error_details.append(f"  - {r.get('action')}: {err_msg}")
             summary += "\nErrors:\n" + "\n".join(error_details)
         return summary

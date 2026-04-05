@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import pytest
-
 from krita_client import KritaClient
 from krita_client.config import ClientConfig
 

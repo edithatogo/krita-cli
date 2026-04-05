@@ -2,14 +2,11 @@
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
-
 import pytest
 from typer.testing import CliRunner
 
-from krita_cli.app import app
 from krita_cli import config_cmd
+from krita_cli.app import app
 
 runner = CliRunner()
 

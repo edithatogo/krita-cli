@@ -15,13 +15,13 @@ sys.modules["PyQt5.QtCore"] = MagicMock()
 sys.modules["PyQt5.QtGui"] = MagicMock()
 
 # Import snapshot_store after mocking
-from kritamcp.snapshot_store import BatchSnapshotStore
-
 import os
-import tempfile
 import shutil
+import tempfile
 from pathlib import Path
+
 import pytest
+from kritamcp.snapshot_store import BatchSnapshotStore
 
 
 @pytest.fixture
@@ -37,10 +37,10 @@ def test_create_and_get_snapshot(store: BatchSnapshotStore) -> None:
     # Create a dummy file
     snapshot_path = os.path.join(store.snapshot_dir, "test.png")
     Path(snapshot_path).touch()
-    
+
     commands = [{"action": "stroke", "params": {}}]
     batch_id = store.create_snapshot(commands, snapshot_path)
-    
+
     snapshot = store.get_snapshot(batch_id)
     assert snapshot is not None
     assert snapshot.batch_id == batch_id
@@ -57,11 +57,11 @@ def test_snapshot_eviction(store: BatchSnapshotStore) -> None:
         Path(path).touch()
         paths.append(path)
         ids.append(store.create_snapshot([], path))
-        
+
     # The first one (index 0) should be evicted
     assert store.get_snapshot(ids[0]) is None
     assert not os.path.exists(paths[0])
-    
+
     # Others should still be there
     for i in range(1, 4):
         assert store.get_snapshot(ids[i]) is not None
@@ -72,7 +72,7 @@ def test_remove_snapshot(store: BatchSnapshotStore) -> None:
     path = os.path.join(store.snapshot_dir, "remove.png")
     Path(path).touch()
     batch_id = store.create_snapshot([], path)
-    
+
     assert os.path.exists(path)
     removed = store.remove_snapshot(batch_id)
     assert removed is True
@@ -85,7 +85,7 @@ def test_clear_store(store: BatchSnapshotStore) -> None:
         path = os.path.join(store.snapshot_dir, f"clear_{i}.png")
         Path(path).touch()
         store.create_snapshot([], path)
-        
+
     store.clear()
     assert len(store._snapshots) == 0
     assert len(os.listdir(store.snapshot_dir)) == 0

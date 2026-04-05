@@ -1,7 +1,10 @@
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import MagicMock, patch
+
 from krita_client.client import KritaClient
 from krita_client.models import CreateLayerParams, InvertSelectionParams
+
 
 @pytest.fixture
 def client():
@@ -10,17 +13,17 @@ def client():
 def test_undo_redo(client):
     with patch.object(client, "_send") as mock_send:
         mock_send.return_value = {"status": "ok"}
-        
+
         client.undo()
         mock_send.assert_called_with("undo", {})
-        
+
         client.redo()
         mock_send.assert_called_with("redo", {})
 
 def test_invert_selection(client):
     with patch.object(client, "_send") as mock_send:
         mock_send.return_value = {"status": "ok"}
-        
+
         client.invert_selection()
         mock_send.assert_called_with("invert_selection", {})
 

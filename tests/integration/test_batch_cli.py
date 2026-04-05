@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 from unittest.mock import MagicMock, patch
 
-import pytest
 from typer.testing import CliRunner
 
 from krita_cli.app import app
@@ -34,11 +33,12 @@ def test_cli_batch_success(tmp_path) -> None:
             "count": 2,
         }
         mock_get.return_value = mock_client
-        
+
         result = runner.invoke(app, ["batch", str(batch_file)])
-        
+
         assert result.exit_code == 0
-        assert '"status": "ok"' in result.stdout
+        assert "Batch: ok" in result.stdout
+        assert "2 succeeded, 0 failed out of 2" in result.stdout
         # Note: we check batch_execute because we updated the CLI to use it
         mock_client.batch_execute.assert_called_once_with(commands, stop_on_error=False)
 
@@ -69,8 +69,8 @@ def test_cli_batch_stop_on_error(tmp_path) -> None:
         mock_client = MagicMock(spec=KritaClient)
         mock_client.batch_execute.return_value = {"status": "ok"}
         mock_get.return_value = mock_client
-        
+
         result = runner.invoke(app, ["batch", str(batch_file), "--stop-on-error"])
-        
+
         assert result.exit_code == 0
         mock_client.batch_execute.assert_called_once_with([{"action": "undo"}], stop_on_error=True)

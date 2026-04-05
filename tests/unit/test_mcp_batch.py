@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from krita_mcp.server import krita_batch
 
 
@@ -20,7 +18,7 @@ def test_krita_batch_tool_success() -> None:
             "count": 1,
         }
         mock_get.return_value = mock_client
-        
+
         result = krita_batch(commands=[{"action": "set_color"}])
         assert "Batch: 1 succeeded, 0 failed out of 1" in result
 
@@ -37,7 +35,7 @@ def test_krita_batch_tool_with_errors() -> None:
             "count": 2,
         }
         mock_get.return_value = mock_client
-        
+
         result = krita_batch(commands=[{"action": "set_color"}, {"action": "stroke"}])
         assert "1 succeeded, 1 failed out of 2" in result
         assert "stroke: No active layer" in result
@@ -54,6 +52,6 @@ def test_krita_batch_tool_with_nested_error() -> None:
             "count": 1,
         }
         mock_get.return_value = mock_client
-        
+
         result = krita_batch(commands=[{"action": "stroke"}])
         assert "stroke: Out of bounds" in result

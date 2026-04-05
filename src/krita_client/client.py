@@ -23,6 +23,7 @@ from krita_client.models import (
     NewCanvasParams,
     OpenFileParams,
     RenameLayerParams,
+    RollbackParams,
     SaveParams,
     SelectLayerParams,
     SetBrushParams,
@@ -30,7 +31,6 @@ from krita_client.models import (
     SetLayerOpacityParams,
     SetLayerVisibilityParams,
     StrokeParams,
-    RollbackParams,
 )
 
 if TYPE_CHECKING:

@@ -2,14 +2,11 @@
 
 from __future__ import annotations
 
-import json
 from unittest.mock import MagicMock, patch
 
-import pytest
 from typer.testing import CliRunner
 
 from krita_cli.app import app
-from krita_client.models import ErrorCode
 from krita_mcp.server import krita_rollback
 
 runner = CliRunner()
@@ -27,7 +24,7 @@ def test_cli_rollback_success() -> None:
         result = runner.invoke(app, ["rollback", "batch-123"])
 
         assert result.exit_code == 0
-        assert "ok" in result.stdout
+        assert "Rollback successful" in result.stdout
         assert "Rolled back batch-123" in result.stdout
         mock_client.rollback.assert_called_once_with(batch_id="batch-123")
 
@@ -53,9 +50,9 @@ def test_mcp_rollback_not_found() -> None:
     # The MCP server code:
     # except KritaError as exc:
     #     return _format_error(exc)
-    
+
     from krita_client import KritaCommandError
-    
+
     with patch("krita_mcp.server._get_client") as mock_get_client:
         mock_client = MagicMock()
         mock_client.rollback.side_effect = KritaCommandError(
