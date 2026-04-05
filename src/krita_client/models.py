@@ -247,6 +247,10 @@ class ClearSelectionParams(BaseModel):
     """Parameters for clearing the current selection (empty)."""
 
 
+class InvertSelectionParams(BaseModel):
+    """Parameters for inverting the current selection (empty)."""
+
+
 class FillSelectionParams(BaseModel):
     """Parameters for filling the current selection (empty)."""
 

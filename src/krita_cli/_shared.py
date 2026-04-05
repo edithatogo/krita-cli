@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -58,6 +59,15 @@ def _handle_error(exc: KritaError) -> None:
     raise typer.Exit(code=1)
 
 
+@contextmanager
+def _handle_errors() -> Any:
+    """Context manager to handle Krita errors gracefully."""
+    try:
+        yield
+    except KritaError as exc:
+        _handle_error(exc)
+
+
 def _get_client(ctx: Context) -> KritaClient | _RecordingClient:
     """Create a Krita client from the Typer context."""
     state: CLIState = ctx.obj or CLIState()
@@ -79,6 +89,12 @@ def _format_result(result: dict[str, object]) -> None:
         if key == "status":
             continue
         console.print(f"[dim]{key}:[/dim] {value}")
+
+
+def _print_result(result: dict[str, object], message: str) -> None:
+    """Display a command result with a custom message."""
+    console.print(f"[green]{message}[/green]")
+    _format_result(result)
 
 
 # -- Command history integration ----------------------------------------------

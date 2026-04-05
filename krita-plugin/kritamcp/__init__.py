@@ -373,6 +373,7 @@ class KritaMCPExtension(Extension):
             "clear_selection": self.cmd_clear_selection,
             "fill_selection": self.cmd_fill_selection,
             "deselect": self.cmd_deselect,
+            "invert_selection": self.cmd_invert_selection,
         }
 
         handler = handlers.get(action)
@@ -584,6 +585,20 @@ class KritaMCPExtension(Extension):
              return {"status": "ok", "message": "No active selection to clear"}
         
         selection.clear()
+        doc.refreshProjection()
+        return {"status": "ok"}
+
+    def cmd_invert_selection(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Invert the current selection."""
+        doc = self.get_active_document()
+        if not doc:
+            return make_error("No active document", code="NO_ACTIVE_DOCUMENT", recoverable=True)
+        
+        selection = doc.selection()
+        if not selection:
+             return {"status": "ok", "message": "No active selection to invert"}
+        
+        selection.invert()
         doc.refreshProjection()
         return {"status": "ok"}
 

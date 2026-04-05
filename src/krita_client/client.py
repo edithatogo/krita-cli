@@ -428,6 +428,12 @@ class KritaClient:
         validated = self._validate(SetLayerVisibilityParams, {"name": name, "visible": visible})
         return self._send("set_layer_visibility", validated)
 
+    # -- Selection tools ------------------------------------------------------
+
+    def invert_selection(self) -> dict[str, object]:
+        """Invert the current selection."""
+        return self._send("invert_selection", {})
+
     # -- Generic command dispatch ---------------------------------------------
 
     def send_command(
