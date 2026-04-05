@@ -28,7 +28,7 @@ def _mock_client(**kwargs: object) -> KritaClient:
 
 
 def test_cli_health_error() -> None:
-    with patch("krita_cli.cli._get_client") as mock_get:
+    with patch("krita_cli._shared._get_client") as mock_get:
         mock_get.side_effect = KritaConnectionError("refused")
         result = runner.invoke(app, ["health"])
         assert result.exit_code == 1
@@ -36,7 +36,7 @@ def test_cli_health_error() -> None:
 
 
 def test_cli_new_canvas_error() -> None:
-    with patch("krita_cli.cli._get_client") as mock_get:
+    with patch("krita_cli._shared._get_client") as mock_get:
         mock_client = _mock_client()
         mock_client.new_canvas = lambda **kw: {"error": "failed"}  # type: ignore[method-assign]
         mock_get.return_value = mock_client
@@ -46,7 +46,7 @@ def test_cli_new_canvas_error() -> None:
 
 
 def test_cli_set_color_error() -> None:
-    with patch("krita_cli.cli._get_client") as mock_get:
+    with patch("krita_cli._shared._get_client") as mock_get:
         mock_client = _mock_client()
         mock_client.set_color = lambda **kw: {"error": "bad color"}  # type: ignore[method-assign]
         mock_get.return_value = mock_client
@@ -55,7 +55,7 @@ def test_cli_set_color_error() -> None:
 
 
 def test_cli_stroke_error() -> None:
-    with patch("krita_cli.cli._get_client") as mock_get:
+    with patch("krita_cli._shared._get_client") as mock_get:
         mock_client = _mock_client()
         mock_client.stroke = lambda **kw: {"error": "no layer"}  # type: ignore[method-assign]
         mock_get.return_value = mock_client
@@ -64,7 +64,7 @@ def test_cli_stroke_error() -> None:
 
 
 def test_cli_fill_error() -> None:
-    with patch("krita_cli.cli._get_client") as mock_get:
+    with patch("krita_cli._shared._get_client") as mock_get:
         mock_client = _mock_client()
         mock_client.fill = lambda **kw: {"error": "out of bounds"}  # type: ignore[method-assign]
         mock_get.return_value = mock_client
@@ -73,7 +73,7 @@ def test_cli_fill_error() -> None:
 
 
 def test_cli_draw_shape_error() -> None:
-    with patch("krita_cli.cli._get_client") as mock_get:
+    with patch("krita_cli._shared._get_client") as mock_get:
         mock_client = _mock_client()
         mock_client.draw_shape = lambda **kw: {"error": "bad shape"}  # type: ignore[method-assign]
         mock_get.return_value = mock_client
@@ -82,7 +82,7 @@ def test_cli_draw_shape_error() -> None:
 
 
 def test_cli_get_canvas_error() -> None:
-    with patch("krita_cli.cli._get_client") as mock_get:
+    with patch("krita_cli._shared._get_client") as mock_get:
         mock_client = _mock_client()
         mock_client.get_canvas = lambda **kw: {"error": "export failed"}  # type: ignore[method-assign]
         mock_get.return_value = mock_client
@@ -91,7 +91,7 @@ def test_cli_get_canvas_error() -> None:
 
 
 def test_cli_save_error() -> None:
-    with patch("krita_cli.cli._get_client") as mock_get:
+    with patch("krita_cli._shared._get_client") as mock_get:
         mock_client = _mock_client()
         mock_client.save = lambda **kw: {"error": "save failed"}  # type: ignore[method-assign]
         mock_get.return_value = mock_client
@@ -100,7 +100,7 @@ def test_cli_save_error() -> None:
 
 
 def test_cli_clear_error() -> None:
-    with patch("krita_cli.cli._get_client") as mock_get:
+    with patch("krita_cli._shared._get_client") as mock_get:
         mock_client = _mock_client()
         mock_client.clear = lambda **kw: {"error": "clear failed"}  # type: ignore[method-assign]
         mock_get.return_value = mock_client
@@ -109,7 +109,7 @@ def test_cli_clear_error() -> None:
 
 
 def test_cli_undo_error() -> None:
-    with patch("krita_cli.cli._get_client") as mock_get:
+    with patch("krita_cli._shared._get_client") as mock_get:
         mock_client = _mock_client()
         mock_client.undo = lambda: {"error": "nothing to undo"}  # type: ignore[method-assign]
         mock_get.return_value = mock_client
@@ -118,7 +118,7 @@ def test_cli_undo_error() -> None:
 
 
 def test_cli_redo_error() -> None:
-    with patch("krita_cli.cli._get_client") as mock_get:
+    with patch("krita_cli._shared._get_client") as mock_get:
         mock_client = _mock_client()
         mock_client.redo = lambda: {"error": "nothing to redo"}  # type: ignore[method-assign]
         mock_get.return_value = mock_client
@@ -127,7 +127,7 @@ def test_cli_redo_error() -> None:
 
 
 def test_cli_get_color_at_error() -> None:
-    with patch("krita_cli.cli._get_client") as mock_get:
+    with patch("krita_cli._shared._get_client") as mock_get:
         mock_client = _mock_client()
         mock_client.get_color_at = lambda **kw: {"error": "out of bounds"}  # type: ignore[method-assign]
         mock_get.return_value = mock_client
@@ -136,7 +136,7 @@ def test_cli_get_color_at_error() -> None:
 
 
 def test_cli_list_brushes_no_results() -> None:
-    with patch("krita_cli.cli._get_client") as mock_get:
+    with patch("krita_cli._shared._get_client") as mock_get:
         mock_client = _mock_client()
         mock_client.list_brushes = lambda **kw: {"brushes": []}  # type: ignore[method-assign]
         mock_get.return_value = mock_client
@@ -146,7 +146,7 @@ def test_cli_list_brushes_no_results() -> None:
 
 
 def test_cli_list_brushes_error() -> None:
-    with patch("krita_cli.cli._get_client") as mock_get:
+    with patch("krita_cli._shared._get_client") as mock_get:
         mock_client = _mock_client()
         mock_client.list_brushes = lambda **kw: {"error": "failed", "brushes": None}  # type: ignore[method-assign]
         mock_get.return_value = mock_client
@@ -157,7 +157,7 @@ def test_cli_list_brushes_error() -> None:
 
 
 def test_cli_open_file_error() -> None:
-    with patch("krita_cli.cli._get_client") as mock_get:
+    with patch("krita_cli._shared._get_client") as mock_get:
         mock_client = _mock_client()
         mock_client.open_file = lambda **kw: {"error": "not found"}  # type: ignore[method-assign]
         mock_get.return_value = mock_client
@@ -166,7 +166,7 @@ def test_cli_open_file_error() -> None:
 
 
 def test_cli_call_success() -> None:
-    with patch("krita_cli.cli._get_client") as mock_get:
+    with patch("krita_cli._shared._get_client") as mock_get:
         mock_client = _mock_client()
         mock_client.send_command = lambda action, params=None: {"status": "ok"}  # type: ignore[method-assign]
         mock_get.return_value = mock_client
@@ -176,7 +176,7 @@ def test_cli_call_success() -> None:
 
 
 def test_cli_call_no_params() -> None:
-    with patch("krita_cli.cli._get_client") as mock_get:
+    with patch("krita_cli._shared._get_client") as mock_get:
         mock_client = _mock_client()
         mock_client.send_command = lambda action, params=None: {"status": "ok"}  # type: ignore[method-assign]
         mock_get.return_value = mock_client
@@ -185,7 +185,7 @@ def test_cli_call_no_params() -> None:
 
 
 def test_cli_validation_error() -> None:
-    with patch("krita_cli.cli._get_client") as mock_get:
+    with patch("krita_cli._shared._get_client") as mock_get:
         mock_client = _mock_client()
         mock_client.set_color = lambda **kw: (_ for _ in ()).throw(KritaValidationError("bad"))  # type: ignore[method-assign]
         mock_get.return_value = mock_client
@@ -194,7 +194,7 @@ def test_cli_validation_error() -> None:
 
 
 def test_cli_command_error() -> None:
-    with patch("krita_cli.cli._get_client") as mock_get:
+    with patch("krita_cli._shared._get_client") as mock_get:
         mock_client = _mock_client()
         mock_client.set_color = lambda **kw: (_ for _ in ()).throw(KritaCommandError("timeout"))  # type: ignore[method-assign]
         mock_get.return_value = mock_client

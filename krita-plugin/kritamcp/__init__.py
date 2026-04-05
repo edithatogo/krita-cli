@@ -42,21 +42,45 @@ SERVER_PORT = 5678
 CANVAS_OUTPUT_DIR = os.path.expanduser("~/krita-mcp-output")
 MAX_CANVAS_DIM = 8192
 PLUGIN_VERSION = "0.2.0"
+PROTOCOL_VERSION = "1.0.0"
 
 logger = logging.getLogger("kritamcp")
 
-def make_error(message: str, code: str = "INTERNAL_ERROR", recoverable: bool = True) -> dict[str, Any]:
-    # Simple heuristic to determine code if not explicitly passed
-    if "No active" in message:
-        code = "NO_ACTIVE_DOCUMENT"
-    elif "layer" in message.lower():
-        code = "LAYER_NOT_FOUND"
-    elif "bounds" in message.lower() or "dimensions" in message.lower() or "positive" in message.lower():
-        code = "INVALID_PARAMS"
-    elif "not found" in message.lower() or "Unknown" in message:
-        code = "NOT_FOUND"
 
-    return {"error": {"code": code, "message": message, "recoverable": recoverable}}
+def make_error(message: str, code: str = "INTERNAL_ERROR", recoverable: bool = True) -> dict[str, Any]:
+    msg = message
+    cd = code
+    recov = recoverable
+
+    if cd == "INTERNAL_ERROR" and code == "INTERNAL_ERROR":
+        if "No active" in message and "document" in message.lower():
+            cd = "NO_ACTIVE_DOCUMENT"
+        elif "No active" in message and "layer" in message.lower():
+            cd = "NO_ACTIVE_LAYER"
+        elif "No active" in message and "view" in message.lower():
+            cd = "NO_ACTIVE_VIEW"
+        elif "layer" in message.lower() and ("not found" in message.lower() or "no active" in message.lower()):
+            cd = "LAYER_NOT_FOUND"
+        elif "bounds" in message.lower() or "dimensions" in message.lower() or "positive" in message.lower():
+            cd = "INVALID_PARAMETERS"
+        elif "not found" in message.lower() or "Unknown" in message:
+            cd = "FILE_NOT_FOUND"
+        elif "timeout" in message.lower():
+            cd = "COMMAND_TIMEOUT"
+        elif "shape" in message.lower() and ("not supported" in message.lower() or "invalid" in message.lower()):
+            cd = "INVALID_SHAPE"
+        elif "brush" in message.lower() and ("not found" in message.lower()):
+            cd = "BRUSH_NOT_FOUND"
+        elif "color" in message.lower() and ("invalid" in message.lower()):
+            cd = "INVALID_COLOR"
+        elif "too large" in message.lower() or "exceed" in message.lower():
+            cd = "CANVAS_TOO_LARGE"
+        elif "traversal" in message.lower():
+            cd = "PATH_TRAVERSAL_BLOCKED"
+        elif "file not found" in message.lower():
+            cd = "FILE_NOT_FOUND"
+
+    return {"error": {"code": cd, "message": msg, "recoverable": recov}}
 
 
 # -- Thread-safe command queue -----------------------------------------------
@@ -109,7 +133,7 @@ class CommandQueue:
             if command_id in self._results:
                 return self._results.pop(command_id)
 
-        return make_error("Timeout waiting for command execution")
+        return make_error("Timeout waiting for command execution", code="COMMAND_TIMEOUT", recoverable=True)
 
 
 # Global command queue and thread-safe counter
@@ -146,7 +170,7 @@ class PaintRequestHandler(BaseHTTPRequestHandler):
                     "status": "ok",
                     "plugin": "kritamcp",
                     "version": PLUGIN_VERSION,
-                    "protocol_version": 1,
+                    "protocol_version": PROTOCOL_VERSION,
                 }
             )
         elif parsed.path == "/info":
@@ -154,7 +178,7 @@ class PaintRequestHandler(BaseHTTPRequestHandler):
                 {
                     "status": "ok",
                     "version": PLUGIN_VERSION,
-                    "protocol_version": 1,
+                    "protocol_version": PROTOCOL_VERSION,
                     "canvas_dir": CANVAS_OUTPUT_DIR,
                     "commands": [
                         "new_canvas",
@@ -171,11 +195,12 @@ class PaintRequestHandler(BaseHTTPRequestHandler):
                         "get_color_at",
                         "list_brushes",
                         "open_file",
+                        "batch",
                     ],
                 }
             )
         else:
-            self.send_json_response(make_error("Unknown endpoint"), 404)
+            self.send_json_response(make_error("Unknown endpoint", code="UNKNOWN_ACTION", recoverable=False), 404)
 
     def do_POST(self) -> None:
         """Handle POST requests — paint commands."""
@@ -185,7 +210,7 @@ class PaintRequestHandler(BaseHTTPRequestHandler):
         try:
             command = json.loads(body)
         except json.JSONDecodeError:
-            self.send_json_response(make_error("Invalid JSON"), 400)
+            self.send_json_response(make_error("Invalid JSON", code="INVALID_PARAMETERS", recoverable=False), 400)
             return
 
         command_id = _next_command_id()
@@ -241,18 +266,36 @@ class KritaMCPExtension(Extension):
         self.load_config()
 
     def load_config(self) -> None:
+        """Load configuration from ~/.krita-cli/config.json first, then fallback to ~/.kritamcp_config.json."""
+        global SERVER_PORT, CANVAS_OUTPUT_DIR, MAX_CANVAS_DIM
+        # Try the new krita-cli config location first
+        krita_cli_config = os.path.expanduser("~/.krita-cli/config.json")
+        if os.path.exists(krita_cli_config):
+            try:
+                with open(krita_cli_config, encoding="utf-8") as f:
+                    config = json.load(f)
+                    SERVER_PORT = config.get("port", SERVER_PORT)
+                    CANVAS_OUTPUT_DIR = config.get(
+                        "canvas_output_dir", os.path.expanduser(config.get("canvas_output_dir", CANVAS_OUTPUT_DIR))
+                    )
+                    MAX_CANVAS_DIM = config.get("max_canvas_dim", MAX_CANVAS_DIM)
+                    logger.info("Loaded config from %s", krita_cli_config)
+                    return
+            except Exception as e:
+                logger.error("Failed to load config from %s: %s", krita_cli_config, e)
+        # Fallback to legacy config path
         if os.path.exists(self.config_path):
             try:
-                import json
                 with open(self.config_path, encoding="utf-8") as f:
                     config = json.load(f)
-                    # Apply config
-                    global SERVER_PORT, CANVAS_OUTPUT_DIR, MAX_CANVAS_DIM
                     SERVER_PORT = config.get("port", SERVER_PORT)
-                    CANVAS_OUTPUT_DIR = config.get("output_dir", os.path.expanduser(config.get("output_dir", CANVAS_OUTPUT_DIR)))
+                    CANVAS_OUTPUT_DIR = config.get(
+                        "output_dir", os.path.expanduser(config.get("output_dir", CANVAS_OUTPUT_DIR))
+                    )
                     MAX_CANVAS_DIM = config.get("max_canvas_dim", MAX_CANVAS_DIM)
+                    logger.info("Loaded config from %s", self.config_path)
             except Exception as e:
-                logger.error("Failed to load config: %s", e)
+                logger.error("Failed to load config from %s: %s", self.config_path, e)
 
     def setup(self) -> None:
         pass
@@ -315,12 +358,258 @@ class KritaMCPExtension(Extension):
             "get_color_at": self.cmd_get_color_at,
             "list_brushes": self.cmd_list_brushes,
             "open_file": self.cmd_open_file,
+            "batch": self.cmd_batch,
+            "get_canvas_info": self.cmd_get_canvas_info,
+            "get_current_color": self.cmd_get_current_color,
+            "get_current_brush": self.cmd_get_current_brush,
+            "list_layers": self.cmd_list_layers,
+            "create_layer": self.cmd_create_layer,
+            "select_layer": self.cmd_select_layer,
+            "delete_layer": self.cmd_delete_layer,
+            "rename_layer": self.cmd_rename_layer,
+            "set_layer_opacity": self.cmd_set_layer_opacity,
+            "set_layer_visibility": self.cmd_set_layer_visibility,
+            "select_area": self.cmd_select_area,
+            "clear_selection": self.cmd_clear_selection,
+            "fill_selection": self.cmd_fill_selection,
+            "deselect": self.cmd_deselect,
         }
 
         handler = handlers.get(action)
         if handler is None:
-            return make_error(f"Unknown action: {action}")
+            return make_error(f"Unknown action: {action}", code="UNKNOWN_ACTION", recoverable=False)
         return handler(params)
+
+    # -- Canvas & State Introspection -----------------------------------------
+
+    def cmd_get_canvas_info(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Get information about the current canvas."""
+        doc = self.get_active_document()
+        if not doc:
+            return make_error("No active document", code="NO_ACTIVE_DOCUMENT", recoverable=True)
+        return {
+            "status": "ok",
+            "name": doc.name(),
+            "width": doc.width(),
+            "height": doc.height(),
+            "color_model": doc.colorModel(),
+            "color_depth": doc.colorDepth(),
+            "resolution": doc.resolution(),
+        }
+
+    def cmd_get_current_color(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Get the current foreground and background colors."""
+        view = self.get_active_view()
+        if not view:
+            return make_error("No active view", code="NO_ACTIVE_VIEW", recoverable=True)
+        
+        fg = view.foregroundColor()
+        bg = view.backgroundColor()
+        canvas = view.canvas()
+        
+        fg_q = fg.colorForCanvas(canvas)
+        bg_q = bg.colorForCanvas(canvas)
+        
+        return {
+            "status": "ok",
+            "foreground": fg_q.name(),
+            "background": bg_q.name(),
+        }
+
+    def cmd_get_current_brush(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Get the current brush preset and properties."""
+        view = self.get_active_view()
+        if not view:
+            return make_error("No active view", code="NO_ACTIVE_VIEW", recoverable=True)
+        
+        preset = view.brushPreset()
+        return {
+            "status": "ok",
+            "preset": preset.name() if preset else "unknown",
+            "size": view.brushSize(),
+            "opacity": view.brushOpacity(),
+        }
+
+    # -- Layer Management -----------------------------------------------------
+
+    def _get_all_nodes(self, parent: Node) -> list[Node]:
+        """Recursively collect all nodes."""
+        nodes = []
+        for child in parent.childNodes():
+            nodes.append(child)
+            nodes.extend(self._get_all_nodes(child))
+        return nodes
+
+    def cmd_list_layers(self, params: dict[str, Any]) -> dict[str, Any]:
+        """List all layers in the document."""
+        doc = self.get_active_document()
+        if not doc:
+            return make_error("No active document", code="NO_ACTIVE_DOCUMENT", recoverable=True)
+        
+        all_nodes = self._get_all_nodes(doc.rootNode())
+        layers = []
+        for node in all_nodes:
+            layers.append({
+                "name": node.name(),
+                "type": node.type(),
+                "visible": node.visible(),
+                "opacity": node.opacity() / 255.0 if node.opacity() > 1.0 else node.opacity(),
+                "locked": node.locked(),
+            })
+        return {"status": "ok", "layers": layers, "count": len(layers)}
+
+    def cmd_create_layer(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Create a new layer."""
+        doc = self.get_active_document()
+        if not doc:
+            return make_error("No active document", code="NO_ACTIVE_DOCUMENT", recoverable=True)
+        
+        name = params.get("name", "New Layer")
+        layer_type = params.get("layer_type", "paintlayer")
+        
+        # Security: limit layers
+        all_nodes = self._get_all_nodes(doc.rootNode())
+        if len(all_nodes) >= 100:
+            return make_error("Maximum layer count reached (100)", code="INTERNAL_ERROR", recoverable=True)
+
+        layer = doc.createNode(name, layer_type)
+        doc.rootNode().addChildNode(layer, None)
+        return {"status": "ok", "name": name, "type": layer_type}
+
+    def _find_node(self, name: str) -> Node | None:
+        """Find a node by name in the active document."""
+        doc = self.get_active_document()
+        if not doc:
+            return None
+        all_nodes = self._get_all_nodes(doc.rootNode())
+        for node in all_nodes:
+            if node.name() == name:
+                return node
+        return None
+
+    def cmd_select_layer(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Select a layer by name."""
+        name = params.get("name")
+        if not name:
+            return make_error("Missing layer name", code="INVALID_PARAMETERS", recoverable=True)
+        
+        node = self._find_node(name)
+        if not node:
+            return make_error(f"Layer not found: {name}", code="LAYER_NOT_FOUND", recoverable=True)
+        
+        doc = self.get_active_document()
+        doc.setActiveNode(node)
+        return {"status": "ok", "name": name}
+
+    def cmd_delete_layer(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Delete a layer by name."""
+        name = params.get("name")
+        node = self._find_node(name)
+        if not node:
+            return make_error(f"Layer not found: {name}", code="LAYER_NOT_FOUND", recoverable=True)
+        
+        doc = self.get_active_document()
+        doc.removeNode(node)
+        return {"status": "ok", "name": name}
+
+    def cmd_rename_layer(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Rename a layer."""
+        old_name = params.get("old_name")
+        new_name = params.get("new_name")
+        node = self._find_node(old_name)
+        if not node:
+            return make_error(f"Layer not found: {old_name}", code="LAYER_NOT_FOUND", recoverable=True)
+        
+        node.setName(new_name)
+        return {"status": "ok", "old_name": old_name, "new_name": new_name}
+
+    def cmd_set_layer_opacity(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Set layer opacity."""
+        name = params.get("name")
+        opacity = params.get("opacity", 1.0)
+        node = self._find_node(name)
+        if not node:
+            return make_error(f"Layer not found: {name}", code="LAYER_NOT_FOUND", recoverable=True)
+        
+        # Krita uses 0-255 for opacity internally but python API often takes float or int.
+        # According to stubs, it takes float.
+        node.setOpacity(opacity)
+        return {"status": "ok", "name": name, "opacity": opacity}
+
+    def cmd_set_layer_visibility(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Toggle layer visibility."""
+        name = params.get("name")
+        visible = params.get("visible", True)
+        node = self._find_node(name)
+        if not node:
+            return make_error(f"Layer not found: {name}", code="LAYER_NOT_FOUND", recoverable=True)
+        
+        node.setVisible(visible)
+        return {"status": "ok", "name": name, "visible": visible}
+
+    # -- Selection Tools ------------------------------------------------------
+
+    def cmd_select_area(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Select a rectangular area."""
+        doc = self.get_active_document()
+        if not doc:
+            return make_error("No active document", code="NO_ACTIVE_DOCUMENT", recoverable=True)
+        
+        x = params.get("x", 0)
+        y = params.get("y", 0)
+        w = params.get("width", 100)
+        h = params.get("height", 100)
+
+        # Basic bounds check (doc dims)
+        if w < 1 or h < 1 or x < 0 or y < 0:
+             return make_error("Invalid selection dimensions", code="INVALID_PARAMETERS", recoverable=True)
+
+        selection = doc.selection()
+        if not selection:
+             # If selection() is not available in Document, this will raise.
+             # In newer Krita API, you might need to create it.
+             return make_error("Selection API not available in this Krita version", code="INTERNAL_ERROR", recoverable=False)
+        
+        selection.select(x, y, w, h, 255) # 255 is opacity
+        return {"status": "ok", "x": x, "y": y, "width": w, "height": h}
+
+    def cmd_clear_selection(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Clear the content of the selection on the active layer."""
+        doc = self.get_active_document()
+        if not doc:
+            return make_error("No active document", code="NO_ACTIVE_DOCUMENT", recoverable=True)
+        
+        selection = doc.selection()
+        if not selection:
+             return {"status": "ok", "message": "No active selection to clear"}
+        
+        selection.clear()
+        doc.refreshProjection()
+        return {"status": "ok"}
+
+    def cmd_fill_selection(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Fill the current selection with foreground color."""
+        doc = self.get_active_document()
+        view = self.get_active_view()
+        if not doc or not view:
+            return make_error("No active document/view", code="NO_ACTIVE_DOCUMENT", recoverable=True)
+        
+        doc.fillSelection(view.foregroundColor())
+        doc.refreshProjection()
+        return {"status": "ok"}
+
+    def cmd_deselect(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Remove the active selection."""
+        doc = self.get_active_document()
+        if not doc:
+            return make_error("No active document", code="NO_ACTIVE_DOCUMENT", recoverable=True)
+        
+        doc.setSelection(None)
+        doc.refreshProjection()
+        return {"status": "ok"}
+
+    def cmd_open_file(self, params: dict[str, Any]) -> dict[str, Any]:
+        pass
 
     def get_active_document(self) -> Any | None:
         app = Krita.instance()
@@ -359,9 +648,13 @@ class KritaMCPExtension(Extension):
 
         # Prevent OOM
         if width > MAX_CANVAS_DIM or height > MAX_CANVAS_DIM:
-            return make_error(f"Canvas dimensions exceed maximum ({MAX_CANVAS_DIM}x{MAX_CANVAS_DIM})")
+            return make_error(
+                f"Canvas dimensions exceed maximum ({MAX_CANVAS_DIM}x{MAX_CANVAS_DIM})",
+                code="CANVAS_TOO_LARGE",
+                recoverable=True,
+            )
         if width < 1 or height < 1:
-            return make_error("Canvas dimensions must be positive")
+            return make_error("Canvas dimensions must be positive", code="INVALID_PARAMETERS", recoverable=True)
 
         app = Krita.instance()
         doc = app.createDocument(width, height, name, "RGBA", "U8", "", 120.0)
@@ -388,7 +681,7 @@ class KritaMCPExtension(Extension):
         color_hex = params.get("color", "#ffffff")
         view = self.get_active_view()
         if not view:
-            return make_error("No active view")
+            return make_error("No active view", code="NO_ACTIVE_VIEW", recoverable=True)
 
         color = QColor(color_hex)
         mc = ManagedColor.fromQColor(color, view.canvas())
@@ -403,7 +696,7 @@ class KritaMCPExtension(Extension):
 
         view = self.get_active_view()
         if not view:
-            return make_error("No active view")
+            return make_error("No active view", code="NO_ACTIVE_VIEW", recoverable=True)
 
         if preset_name:
             presets = Krita.instance().resources("preset")
@@ -415,7 +708,7 @@ class KritaMCPExtension(Extension):
             if found:
                 view.setCurrentBrushPreset(found)
             else:
-                return make_error(f"Brush preset not found: {preset_name}")
+                return make_error(f"Brush preset not found: {preset_name}", code="BRUSH_NOT_FOUND", recoverable=True)
 
         if size is not None:
             self.current_brush_size = size
@@ -439,16 +732,16 @@ class KritaMCPExtension(Extension):
             hardness = pressure
 
         if len(points) < 2:
-            return make_error("Need at least 2 points for a stroke")
+            return make_error("Need at least 2 points for a stroke", code="INVALID_PARAMETERS", recoverable=True)
 
         layer = self.get_active_layer()
         if not layer:
-            return make_error("No active layer")
+            return make_error("No active layer", code="NO_ACTIVE_LAYER", recoverable=True)
 
         doc = self.get_active_document()
         view = self.get_active_view()
         if not view:
-            return make_error("No active view")
+            return make_error("No active view", code="NO_ACTIVE_VIEW", recoverable=True)
 
         r, g, b = self._get_fg_color()
         doc_width = doc.width()
@@ -464,7 +757,7 @@ class KritaMCPExtension(Extension):
         h = max_y - min_y
 
         if w <= 0 or h <= 0:
-            return make_error("Stroke out of bounds")
+            return make_error("Stroke out of bounds", code="INVALID_PARAMETERS", recoverable=True)
 
         existing = layer.pixelData(min_x, min_y, w, h)
 
@@ -603,12 +896,12 @@ class KritaMCPExtension(Extension):
 
         layer = self.get_active_layer()
         if not layer:
-            return make_error("No active layer")
+            return make_error("No active layer", code="NO_ACTIVE_LAYER", recoverable=True)
 
         doc = self.get_active_document()
         view = self.get_active_view()
         if not view:
-            return make_error("No active view")
+            return make_error("No active view", code="NO_ACTIVE_VIEW", recoverable=True)
 
         r, g, b = self._get_fg_color()
         x1 = max(0, x - radius)
@@ -619,7 +912,7 @@ class KritaMCPExtension(Extension):
         h = y2 - y1
 
         if w <= 0 or h <= 0:
-            return make_error("Fill area out of bounds")
+            return make_error("Fill area out of bounds", code="INVALID_PARAMETERS", recoverable=True)
 
         existing = layer.pixelData(x1, y1, w, h)
         pixels = bytearray(existing)
@@ -651,12 +944,12 @@ class KritaMCPExtension(Extension):
 
         layer = self.get_active_layer()
         if not layer:
-            return make_error("No active layer")
+            return make_error("No active layer", code="NO_ACTIVE_LAYER", recoverable=True)
 
         doc = self.get_active_document()
         view = self.get_active_view()
         if not view:
-            return make_error("No active view")
+            return make_error("No active view", code="NO_ACTIVE_VIEW", recoverable=True)
 
         r, g, b = self._get_fg_color()
         doc_width = doc.width()
@@ -755,7 +1048,7 @@ class KritaMCPExtension(Extension):
 
                 layer.setPixelData(bytes(pixels), sx1, sy1, sw, sh)
         else:
-            return make_error(f"Shape '{shape}' not supported")
+            return make_error(f"Shape '{shape}' not supported", code="INVALID_SHAPE", recoverable=True)
 
         doc.refreshProjection()
         return {"status": "ok", "shape": shape}
@@ -765,7 +1058,7 @@ class KritaMCPExtension(Extension):
         filename = params.get("filename", "canvas.png")
         doc = self.get_active_document()
         if not doc:
-            return make_error("No active document")
+            return make_error("No active document", code="NO_ACTIVE_DOCUMENT", recoverable=True)
 
         if not filename.endswith(".png"):
             filename += ".png"
@@ -783,7 +1076,7 @@ class KritaMCPExtension(Extension):
         if action:
             action.trigger()
             return {"status": "ok"}
-        return make_error("Could not trigger undo")
+        return make_error("Could not trigger undo", code="INTERNAL_ERROR", recoverable=True)
 
     def cmd_redo(self, params: dict[str, Any]) -> dict[str, Any]:
         """Redo last undone action."""
@@ -792,13 +1085,13 @@ class KritaMCPExtension(Extension):
         if action:
             action.trigger()
             return {"status": "ok"}
-        return make_error("Could not trigger redo")
+        return make_error("Could not trigger redo", code="INTERNAL_ERROR", recoverable=True)
 
     def cmd_clear(self, params: dict[str, Any]) -> dict[str, Any]:
         """Clear the canvas."""
         layer = self.get_active_layer()
         if not layer:
-            return make_error("No active layer")
+            return make_error("No active layer", code="NO_ACTIVE_LAYER", recoverable=True)
 
         doc = self.get_active_document()
         width = doc.width()
@@ -806,7 +1099,11 @@ class KritaMCPExtension(Extension):
 
         # Prevent OOM on very large canvases
         if width * height > MAX_CANVAS_DIM * MAX_CANVAS_DIM:
-            return make_error(f"Canvas too large to clear (max {MAX_CANVAS_DIM}x{MAX_CANVAS_DIM})")
+            return make_error(
+                f"Canvas too large to clear (max {MAX_CANVAS_DIM}x{MAX_CANVAS_DIM})",
+                code="CANVAS_TOO_LARGE",
+                recoverable=True,
+            )
 
         bg_color = params.get("color", "#1a1a2e")
         color = QColor(bg_color)
@@ -821,15 +1118,15 @@ class KritaMCPExtension(Extension):
         """Save to specific path."""
         filepath = params.get("path")
         if not filepath:
-            return make_error("No path specified")
+            return make_error("No path specified", code="INVALID_PARAMETERS", recoverable=True)
 
         # Path traversal prevention
         if ".." in filepath:
-            return make_error("Path traversal is not allowed")
+            return make_error("Path traversal is not allowed", code="PATH_TRAVERSAL_BLOCKED", recoverable=False)
 
         doc = self.get_active_document()
         if not doc:
-            return make_error("No active document")
+            return make_error("No active document", code="NO_ACTIVE_DOCUMENT", recoverable=True)
 
         doc.setBatchmode(True)
         doc.exportImage(filepath, InfoObject())
@@ -843,7 +1140,7 @@ class KritaMCPExtension(Extension):
 
         doc = self.get_active_document()
         if not doc:
-            return make_error("No active document")
+            return make_error("No active document", code="NO_ACTIVE_DOCUMENT", recoverable=True)
 
         layer = doc.rootNode()
         pixel_data = layer.projectionPixelData(x, y, 1, 1)
@@ -860,7 +1157,7 @@ class KritaMCPExtension(Extension):
                 "a": a_val,
             }
 
-        return make_error("Could not read pixel")
+        return make_error("Could not read pixel", code="INTERNAL_ERROR", recoverable=True)
 
     def cmd_list_brushes(self, params: dict[str, Any]) -> dict[str, Any]:
         """List available brush presets."""
@@ -882,19 +1179,19 @@ class KritaMCPExtension(Extension):
         """Open an existing file in Krita."""
         filepath = params.get("path")
         if not filepath:
-            return make_error("No path specified")
+            return make_error("No path specified", code="INVALID_PARAMETERS", recoverable=True)
 
         # Path traversal prevention
         if ".." in filepath:
-            return make_error("Path traversal is not allowed")
+            return make_error("Path traversal is not allowed", code="PATH_TRAVERSAL_BLOCKED", recoverable=False)
 
         if not os.path.exists(filepath):
-            return make_error(f"File not found: {filepath}")
+            return make_error(f"File not found: {filepath}", code="FILE_NOT_FOUND", recoverable=True)
 
         app = Krita.instance()
         doc = app.openDocument(filepath)
         if not doc:
-            return make_error(f"Failed to open: {filepath}")
+            return make_error(f"Failed to open: {filepath}", code="INTERNAL_ERROR", recoverable=True)
 
         window = app.activeWindow()
         if window:
@@ -906,6 +1203,33 @@ class KritaMCPExtension(Extension):
             "name": doc.name(),
             "width": doc.width(),
             "height": doc.height(),
+        }
+
+    def cmd_batch(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Execute multiple commands sequentially."""
+        commands = params.get("commands", [])
+        stop_on_error = params.get("stop_on_error", False)
+        results: list[dict[str, Any]] = []
+        for cmd in commands:
+            action = cmd.get("action")
+            cmd_params = cmd.get("params", {})
+            try:
+                result = self.execute_command({"action": action, "params": cmd_params})
+                if "error" in result:
+                    results.append({"action": action, "status": "error", "result": result})
+                    if stop_on_error:
+                        break
+                else:
+                    results.append({"action": action, "status": "ok", "result": result})
+            except Exception as exc:
+                results.append({"action": action, "status": "error", "error": str(exc)})
+                if stop_on_error:
+                    break
+        has_error = any(r.get("status") == "error" for r in results)
+        return {
+            "status": "error" if has_error else "ok",
+            "results": results,
+            "count": len(results),
         }
 
 

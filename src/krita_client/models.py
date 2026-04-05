@@ -13,15 +13,22 @@ from pydantic import BaseModel, Field, field_validator
 class ErrorCode(str, Enum):
     """Semantic error codes for plugin errors."""
 
-    TIMEOUT = "TIMEOUT"
-    UNKNOWN_ENDPOINT = "UNKNOWN_ENDPOINT"
-    INVALID_JSON = "INVALID_JSON"
-    UNKNOWN_ACTION = "UNKNOWN_ACTION"
-    INVALID_PARAMS = "INVALID_PARAMS"
     NO_ACTIVE_DOCUMENT = "NO_ACTIVE_DOCUMENT"
+    NO_ACTIVE_LAYER = "NO_ACTIVE_LAYER"
+    NO_ACTIVE_VIEW = "NO_ACTIVE_VIEW"
+    INVALID_COLOR = "INVALID_COLOR"
+    CANVAS_TOO_LARGE = "CANVAS_TOO_LARGE"
+    PATH_TRAVERSAL_BLOCKED = "PATH_TRAVERSAL_BLOCKED"
+    FILE_NOT_FOUND = "FILE_NOT_FOUND"
+    PLUGIN_UNREACHABLE = "PLUGIN_UNREACHABLE"
+    COMMAND_TIMEOUT = "COMMAND_TIMEOUT"
+    INVALID_SHAPE = "INVALID_SHAPE"
     LAYER_NOT_FOUND = "LAYER_NOT_FOUND"
-    NOT_FOUND = "NOT_FOUND"
+    BRUSH_NOT_FOUND = "BRUSH_NOT_FOUND"
+    INVALID_PARAMETERS = "INVALID_PARAMETERS"
+    UNKNOWN_ACTION = "UNKNOWN_ACTION"
     INTERNAL_ERROR = "INTERNAL_ERROR"
+    INCOMPATIBLE_PROTOCOL = "INCOMPATIBLE_PROTOCOL"
 
 
 class KritaErrorResponse(BaseModel):
@@ -168,6 +175,86 @@ class OpenFileParams(BaseModel):
         return value.strip()
 
 
+class CanvasInfoParams(BaseModel):
+    """Parameters for getting canvas information."""
+
+
+class CurrentColorParams(BaseModel):
+    """Parameters for getting the current color."""
+
+
+class CurrentBrushParams(BaseModel):
+    """Parameters for getting the current brush."""
+
+
+class ListLayersParams(BaseModel):
+    """Parameters for listing layers."""
+
+
+class CreateLayerParams(BaseModel):
+    """Parameters for creating a new layer."""
+
+    name: str = "New Layer"
+    layer_type: str = "paintlayer"
+
+
+class SelectLayerParams(BaseModel):
+    """Parameters for selecting a layer by name."""
+
+    name: str
+
+
+class DeleteLayerParams(BaseModel):
+    """Parameters for deleting a layer by name."""
+
+    name: str
+
+
+class RenameLayerParams(BaseModel):
+    """Parameters for renaming a layer."""
+
+    old_name: str
+    new_name: str
+
+
+class SetLayerOpacityParams(BaseModel):
+    """Parameters for setting layer opacity."""
+
+    name: str
+    opacity: Annotated[float, Field(ge=0.0, le=1.0)]
+
+
+class SetLayerVisibilityParams(BaseModel):
+    """Parameters for toggling layer visibility."""
+
+    name: str
+    visible: bool
+
+
+# -- Selection operations -----------------------------------------------------
+
+
+class SelectAreaParams(BaseModel):
+    """Parameters for selecting a rectangular area."""
+
+    x: int
+    y: int
+    width: Annotated[int, Field(ge=1, le=8192)]
+    height: Annotated[int, Field(ge=1, le=8192)]
+
+
+class ClearSelectionParams(BaseModel):
+    """Parameters for clearing the current selection (empty)."""
+
+
+class FillSelectionParams(BaseModel):
+    """Parameters for filling the current selection (empty)."""
+
+
+class DeselectParams(BaseModel):
+    """Parameters for deselecting (empty)."""
+
+
 # -- Batch operations ---------------------------------------------------------
 
 
@@ -202,4 +289,18 @@ COMMAND_MODELS: dict[str, type[BaseModel]] = {
     "list_brushes": ListBrushesParams,
     "open_file": OpenFileParams,
     "batch": BatchParams,
+    "list_layers": ListLayersParams,
+    "create_layer": CreateLayerParams,
+    "select_layer": SelectLayerParams,
+    "delete_layer": DeleteLayerParams,
+    "rename_layer": RenameLayerParams,
+    "set_layer_opacity": SetLayerOpacityParams,
+    "set_layer_visibility": SetLayerVisibilityParams,
+    "get_canvas_info": CanvasInfoParams,
+    "get_current_color": CurrentColorParams,
+    "get_current_brush": CurrentBrushParams,
+    "select_area": SelectAreaParams,
+    "clear_selection": ClearSelectionParams,
+    "fill_selection": FillSelectionParams,
+    "deselect": DeselectParams,
 }

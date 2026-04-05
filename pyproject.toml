@@ -145,6 +145,7 @@ ignore = [
     "TC002",  # BaseModel import in type-checking block would break runtime
     "TRY300", # try/else pattern is standard for HTTP client error handling
     "EM102",  # f-string in exception message is acceptable for protocol errors
+    "PLC0415", # lazy import needed to avoid circular dependency
 ]
 "src/krita_cli/config_cli.py" = [
     "PTH111", # pre-existing os.path usage
@@ -153,12 +154,26 @@ ignore = [
     "BLE001", # pre-existing blind exception
     "W293",   # pre-existing whitespace issues
 ]
+"src/krita_cli/config_cmd.py" = [
+    "EM102",  # f-string in exception message is acceptable here
+]
+"src/krita_cli/history.py" = [
+    "S110",  # try-except-pass for non-critical logging
+    "BLE001", # blind except for non-critical logging
+]
+"src/krita_cli/_shared.py" = [
+    "TRY300", # try/else pattern needed for recording
+]
 "src/krita_cli/commands/history.py" = [
     "FBT002", # boolean typer.Option flags are standard CLI patterns
+    "TC001",  # _RecordingClient is a subtype of KritaClient
 ]
 "src/krita_cli/commands/batch.py" = [
     "FBT002", # boolean typer.Option flags are standard CLI patterns
     "TC003",  # Path is used at runtime for file operations
+]
+"src/krita_cli/commands/layers.py" = [
+    "FBT002", # boolean typer.Option flags are standard CLI patterns
 ]
 "src/krita_mcp/server.py" = [
     "TRY300", # try/else pattern is standard for MCP tool error handling
@@ -166,6 +181,7 @@ ignore = [
     "FBT002", # boolean defaults are natural for MCP tools
     "PLW0603", # global singleton pattern is appropriate here
     "A002",   # filter param matches MCP client API
+    "TC001",  # dynamic dict access from HTTP response
 ]
 "types/**/*.pyi" = [
     "N802",   # function names must match Krita's camelCase API

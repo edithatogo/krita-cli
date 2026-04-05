@@ -372,5 +372,109 @@ def krita_open_file(path: str) -> str:
         return _format_error(exc)
 
 
+@mcp.tool()
+def krita_batch(
+    commands: list[dict],
+    stop_on_error: bool = False,
+) -> str:
+    """Execute multiple commands in a single batch.
+
+    Args:
+        commands: List of command objects, each with "action" and optional "params"
+        stop_on_error: Stop executing remaining commands on first error
+    """
+    try:
+        client = _get_client()
+        result = client.batch(commands, stop_on_error=stop_on_error)
+        # type: ignore[assignment]
+        results = result.get("results", [])
+        ok = sum(1 for r in results if r.get("status") == "ok")  # ty:ignore[not-iterable]
+        errs = sum(1 for r in results if r.get("status") == "error")  # ty:ignore[not-iterable]
+        summary = f"Batch: {ok} succeeded, {errs} failed out of {len(results)}"  # ty:ignore[invalid-argument-type]
+        if errs > 0:
+            error_details = []
+            for r in results:  # ty:ignore[not-iterable]
+                if r.get("status") == "error":
+                    err_msg = r.get("error", "unknown")
+                    result_data = r.get("result", {})  # type: ignore[assignment]
+                    if isinstance(result_data, dict) and "error" in result_data:
+                        err_info = result_data["error"]  # type: ignore[index]
+                        if isinstance(err_info, dict):
+                            err_msg = err_info.get("message", str(err_info))  # type: ignore[union-attr]
+                    error_details.append(f"  - {r.get('action')}: {err_msg}")  # type: ignore[union-attr]
+            summary += "\nErrors:\n" + "\n".join(error_details)
+        return summary
+    except KritaError as exc:
+        return _format_error(exc)
+
+
+@mcp.tool()
+def krita_get_canvas_info() -> str:
+    """Get information about the current canvas including dimensions, name, and color model.
+
+    Use this to understand the canvas you are working with.
+    """
+    try:
+        client = _get_client()
+        result = client.get_canvas_info()
+        if "error" in result:
+            return f"Error: {result['error']}"
+        parts = []
+        if "name" in result:
+            parts.append(f"name={result['name']}")
+        if "width" in result:
+            parts.append(f"width={result['width']}")
+        if "height" in result:
+            parts.append(f"height={result['height']}")
+        if "color_model" in result:
+            parts.append(f"color_model={result['color_model']}")
+        if "color_depth" in result:
+            parts.append(f"color_depth={result['color_depth']}")
+        return f"Canvas info: {', '.join(parts) if parts else 'no active document'}"
+    except KritaError as exc:
+        return _format_error(exc)
+
+
+@mcp.tool()
+def krita_get_current_color() -> str:
+    """Get the current foreground and background paint colors.
+
+    Use this to check what colors are currently selected for painting.
+    """
+    try:
+        client = _get_client()
+        result = client.get_current_color()
+        if "error" in result:
+            return f"Error: {result['error']}"
+        fg = result.get("foreground", "unknown")
+        bg = result.get("background", "unknown")
+        return f"Colors — foreground: {fg}, background: {bg}"
+    except KritaError as exc:
+        return _format_error(exc)
+
+
+@mcp.tool()
+def krita_get_current_brush() -> str:
+    """Get the current brush preset name, size, and opacity.
+
+    Use this to check the active brush settings before painting.
+    """
+    try:
+        client = _get_client()
+        result = client.get_current_brush()
+        if "error" in result:
+            return f"Error: {result['error']}"
+        parts = []
+        if "preset" in result:
+            parts.append(f"preset={result['preset']}")
+        if "size" in result:
+            parts.append(f"size={result['size']}")
+        if "opacity" in result:
+            parts.append(f"opacity={result['opacity']}")
+        return f"Brush info: {', '.join(parts) if parts else 'no active view'}"
+    except KritaError as exc:
+        return _format_error(exc)
+
+
 if __name__ == "__main__":  # pragma: no cover
     mcp.run()

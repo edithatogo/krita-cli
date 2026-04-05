@@ -11,16 +11,24 @@ from krita_client.models import (
     COMMAND_MODELS,
     BatchParams,
     ClearParams,
+    CreateLayerParams,
+    DeleteLayerParams,
     DrawShapeParams,
+    ErrorCode,
     FillParams,
     GetCanvasParams,
     GetColorAtParams,
     ListBrushesParams,
+    ListLayersParams,
     NewCanvasParams,
     OpenFileParams,
+    RenameLayerParams,
     SaveParams,
+    SelectLayerParams,
     SetBrushParams,
     SetColorParams,
+    SetLayerOpacityParams,
+    SetLayerVisibilityParams,
     StrokeParams,
 )
 
@@ -29,14 +37,16 @@ if TYPE_CHECKING:
 
 from pydantic import BaseModel
 
-SUPPORTED_PROTOCOL_VERSION = 1
+MIN_PROTOCOL_VERSION = "1.0.0"
+MAX_PROTOCOL_VERSION = "1.0.0"
+_SUPPORTED_PROTOCOL_VERSION = 1
 _CANNOT_CONNECT_MSG = "Cannot connect to Krita. Is Krita running with the MCP plugin enabled?"
 
 
 class KritaError(Exception):
     """Base exception for Krita client errors."""
 
-    def __init__(self, message: str, code: str | None = None, recoverable: bool = False) -> None:
+    def __init__(self, message: str, code: ErrorCode | None = None, recoverable: bool = False) -> None:
         super().__init__(message)
         self.message = message
         self.code = code
@@ -121,13 +131,29 @@ class KritaClient:
                 raise KritaCommandError(str(err))
             return data  # type: ignore[no-any-return]
         except httpx.ConnectError as exc:
-            raise KritaConnectionError(_CANNOT_CONNECT_MSG) from exc
+            raise KritaConnectionError(
+                _CANNOT_CONNECT_MSG, code=ErrorCode.PLUGIN_UNREACHABLE, recoverable=True
+            ) from exc
         except httpx.HTTPStatusError as exc:
             msg = f"HTTP {exc.response.status_code}: {exc.response.text}"
-            code = f"HTTP_{exc.response.status_code}"
-            raise KritaCommandError(msg, code=code) from exc
+            raise KritaCommandError(msg, code=ErrorCode.INTERNAL_ERROR) from exc
         except httpx.HTTPError as exc:
-            raise KritaCommandError(str(exc)) from exc
+            raise KritaCommandError(str(exc), code=ErrorCode.COMMAND_TIMEOUT, recoverable=True) from exc
+
+    def _is_compatible(self, protocol_version: str) -> bool:
+        """Check if a protocol version string is within the supported range."""
+        try:
+            parts = protocol_version.split(".")
+            if len(parts) != 3:
+                return False
+            major, minor, patch = int(parts[0]), int(parts[1]), int(parts[2])
+            min_parts = MIN_PROTOCOL_VERSION.split(".")
+            max_parts = MAX_PROTOCOL_VERSION.split(".")
+            min_tuple = (int(min_parts[0]), int(min_parts[1]), int(min_parts[2]))
+            max_tuple = (int(max_parts[0]), int(max_parts[1]), int(max_parts[2]))
+            return min_tuple <= (major, minor, patch) <= max_tuple
+        except (ValueError, IndexError):
+            return False
 
     def _health_get(self) -> dict[str, object]:
         """Send a GET request to the health endpoint."""
@@ -142,15 +168,27 @@ class KritaClient:
                 ),
             )
             data = response.json()  # type: ignore[no-any-return]
-            protocol_version = data.get("protocol_version", 0)
-            if protocol_version > SUPPORTED_PROTOCOL_VERSION:
-                raise KritaConnectionError(
-                    f"Plugin protocol mismatch. Client expects v{SUPPORTED_PROTOCOL_VERSION} "
-                    f"but plugin is running v{protocol_version}. Please upgrade krita-cli."
-                )
+            protocol_version = data.get("protocol_version")
+            if protocol_version is not None:
+                if isinstance(protocol_version, int) and protocol_version > _SUPPORTED_PROTOCOL_VERSION:
+                    raise KritaConnectionError(
+                        f"Plugin protocol mismatch. Client expects v{_SUPPORTED_PROTOCOL_VERSION} "
+                        f"but plugin is running v{protocol_version}. Please upgrade krita-cli.",
+                        code=ErrorCode.INCOMPATIBLE_PROTOCOL,
+                        recoverable=True,
+                    )
+                if isinstance(protocol_version, str) and not self._is_compatible(protocol_version):
+                    raise KritaConnectionError(
+                        f"Incompatible protocol version: {protocol_version}. "
+                        f"Expected {MIN_PROTOCOL_VERSION}-{MAX_PROTOCOL_VERSION}",
+                        code=ErrorCode.INCOMPATIBLE_PROTOCOL,
+                        recoverable=True,
+                    )
             return data
         except httpx.ConnectError as exc:
-            raise KritaConnectionError(_CANNOT_CONNECT_MSG) from exc
+            raise KritaConnectionError(
+                _CANNOT_CONNECT_MSG, code=ErrorCode.PLUGIN_UNREACHABLE, recoverable=True
+            ) from exc
 
     def _validate(
         self,
@@ -301,10 +339,94 @@ class KritaClient:
         validated = self._validate(OpenFileParams, {"path": path})
         return self._send("open_file", validated)
 
-    def batch(self, commands: list[dict[str, object]]) -> dict[str, object]:
+    def batch(self, commands: list[dict[str, object]], *, stop_on_error: bool = False) -> dict[str, object]:
         """Execute multiple commands in a single batch."""
         validated = self._validate(BatchParams, {"commands": commands})
-        return self._send("batch", validated)
+        payload: dict[str, object] = {**validated, "stop_on_error": stop_on_error}
+        return self._send("batch", payload)
+
+    def get_canvas_info(self) -> dict[str, object]:
+        """Get information about the current canvas."""
+        return self._send("get_canvas_info", {})
+
+    def get_current_color(self) -> dict[str, object]:
+        """Get the current foreground and background colors."""
+        return self._send("get_current_color", {})
+
+    def get_current_brush(self) -> dict[str, object]:
+        """Get the current brush preset and properties."""
+        return self._send("get_current_brush", {})
+
+    def select_area(
+        self,
+        x: int,
+        y: int,
+        *,
+        width: int,
+        height: int,
+    ) -> dict[str, object]:
+        """Select a rectangular area on the canvas."""
+        from krita_client.models import SelectAreaParams
+
+        validated = self._validate(
+            SelectAreaParams,
+            {"x": x, "y": y, "width": width, "height": height},
+        )
+        return self._send("select_area", validated)
+
+    def clear_selection(self) -> dict[str, object]:
+        """Clear the contents of the current selection."""
+        return self._send("clear_selection", {})
+
+    def fill_selection(self) -> dict[str, object]:
+        """Fill the current selection with the foreground color."""
+        return self._send("fill_selection", {})
+
+    def deselect(self) -> dict[str, object]:
+        """Remove the current selection."""
+        return self._send("deselect", {})
+
+    # -- Layer management -----------------------------------------------------
+
+    def list_layers(self) -> dict[str, object]:
+        """List all layers in the current document."""
+        validated = self._validate(ListLayersParams, {})
+        return self._send("list_layers", validated)
+
+    def create_layer(
+        self,
+        *,
+        name: str = "New Layer",
+        layer_type: str = "paintlayer",
+    ) -> dict[str, object]:
+        """Create a new layer in the current document."""
+        validated = self._validate(CreateLayerParams, {"name": name, "layer_type": layer_type})
+        return self._send("create_layer", validated)
+
+    def select_layer(self, *, name: str) -> dict[str, object]:
+        """Select a layer by name."""
+        validated = self._validate(SelectLayerParams, {"name": name})
+        return self._send("select_layer", validated)
+
+    def delete_layer(self, *, name: str) -> dict[str, object]:
+        """Delete a layer by name."""
+        validated = self._validate(DeleteLayerParams, {"name": name})
+        return self._send("delete_layer", validated)
+
+    def rename_layer(self, *, old_name: str, new_name: str) -> dict[str, object]:
+        """Rename a layer."""
+        validated = self._validate(RenameLayerParams, {"old_name": old_name, "new_name": new_name})
+        return self._send("rename_layer", validated)
+
+    def set_layer_opacity(self, *, name: str, opacity: float) -> dict[str, object]:
+        """Set the opacity of a layer."""
+        validated = self._validate(SetLayerOpacityParams, {"name": name, "opacity": opacity})
+        return self._send("set_layer_opacity", validated)
+
+    def set_layer_visibility(self, *, name: str, visible: bool) -> dict[str, object]:
+        """Toggle the visibility of a layer."""
+        validated = self._validate(SetLayerVisibilityParams, {"name": name, "visible": visible})
+        return self._send("set_layer_visibility", validated)
 
     # -- Generic command dispatch ---------------------------------------------
 

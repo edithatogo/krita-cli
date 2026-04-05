@@ -18,7 +18,7 @@ runner = CliRunner()
 
 def test_cli_main_keyboard_interrupt(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test that KeyboardInterrupt is handled gracefully."""
-    with patch("krita_cli.cli.app") as mock_app:
+    with patch("krita_cli.app.app") as mock_app:
         mock_app.side_effect = KeyboardInterrupt()
         with pytest.raises(SystemExit) as exc_info:
             main()
@@ -27,7 +27,7 @@ def test_cli_main_keyboard_interrupt(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_cli_main_connection_error(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test that KritaConnectionError in main is handled."""
-    with patch("krita_cli.cli.app") as mock_app:
+    with patch("krita_cli.app.app") as mock_app:
         mock_app.side_effect = KritaConnectionError("refused")
         result = runner.invoke(app, ["health"])
         assert result.exit_code == 1
@@ -113,7 +113,7 @@ def test_cli_format_result_success() -> None:
 
     output = StringIO()
     console = Console(file=output, force_terminal=True)
-    with patch("krita_cli.cli.console", console):
+    with patch("krita_cli._shared.console", console):
         _format_result({"status": "ok", "path": "/tmp/test.png"})
     text = output.getvalue()
     assert "path" in text
@@ -121,7 +121,7 @@ def test_cli_format_result_success() -> None:
 
 def test_cli_stroke_with_url_option() -> None:
     """Test stroke command with --url option."""
-    with patch("krita_cli.cli._get_client") as mock_get:
+    with patch("krita_cli._shared._get_client") as mock_get:
         mock_client = MagicMock(spec=KritaClient)
         mock_client.stroke.return_value = {"status": "ok"}
         mock_get.return_value = mock_client
@@ -131,7 +131,7 @@ def test_cli_stroke_with_url_option() -> None:
 
 def test_cli_call_with_json_params() -> None:
     """Test call command with valid JSON params."""
-    with patch("krita_cli.cli._get_client") as mock_get:
+    with patch("krita_cli._shared._get_client") as mock_get:
         mock_client = MagicMock(spec=KritaClient)
         mock_client.send_command.return_value = {"status": "ok", "data": "test"}
         mock_get.return_value = mock_client
@@ -142,7 +142,7 @@ def test_cli_call_with_json_params() -> None:
 
 def test_cli_new_canvas_success() -> None:
     """Test new-canvas command success path."""
-    with patch("krita_cli.cli._get_client") as mock_get:
+    with patch("krita_cli._shared._get_client") as mock_get:
         mock_client = MagicMock(spec=KritaClient)
         mock_client.new_canvas.return_value = {"status": "ok", "width": 800, "height": 600}
         mock_get.return_value = mock_client
@@ -152,7 +152,7 @@ def test_cli_new_canvas_success() -> None:
 
 def test_cli_set_brush_success() -> None:
     """Test set-brush command success path."""
-    with patch("krita_cli.cli._get_client") as mock_get:
+    with patch("krita_cli._shared._get_client") as mock_get:
         mock_client = MagicMock(spec=KritaClient)
         mock_client.set_brush.return_value = {"status": "ok"}
         mock_get.return_value = mock_client
@@ -162,7 +162,7 @@ def test_cli_set_brush_success() -> None:
 
 def test_cli_fill_success() -> None:
     """Test fill command success path."""
-    with patch("krita_cli.cli._get_client") as mock_get:
+    with patch("krita_cli._shared._get_client") as mock_get:
         mock_client = MagicMock(spec=KritaClient)
         mock_client.fill.return_value = {"status": "ok"}
         mock_get.return_value = mock_client
@@ -172,7 +172,7 @@ def test_cli_fill_success() -> None:
 
 def test_cli_draw_shape_success() -> None:
     """Test draw-shape command success path."""
-    with patch("krita_cli.cli._get_client") as mock_get:
+    with patch("krita_cli._shared._get_client") as mock_get:
         mock_client = MagicMock(spec=KritaClient)
         mock_client.draw_shape.return_value = {"status": "ok"}
         mock_get.return_value = mock_client
@@ -182,7 +182,7 @@ def test_cli_draw_shape_success() -> None:
 
 def test_cli_get_canvas_success() -> None:
     """Test get-canvas command success path."""
-    with patch("krita_cli.cli._get_client") as mock_get:
+    with patch("krita_cli._shared._get_client") as mock_get:
         mock_client = MagicMock(spec=KritaClient)
         mock_client.get_canvas.return_value = {"status": "ok", "path": "/tmp/canvas.png"}
         mock_get.return_value = mock_client
@@ -192,7 +192,7 @@ def test_cli_get_canvas_success() -> None:
 
 def test_cli_save_success() -> None:
     """Test save command success path."""
-    with patch("krita_cli.cli._get_client") as mock_get:
+    with patch("krita_cli._shared._get_client") as mock_get:
         mock_client = MagicMock(spec=KritaClient)
         mock_client.save.return_value = {"status": "ok", "path": "/tmp/test.png"}
         mock_get.return_value = mock_client
@@ -202,7 +202,7 @@ def test_cli_save_success() -> None:
 
 def test_cli_clear_success() -> None:
     """Test clear command success path."""
-    with patch("krita_cli.cli._get_client") as mock_get:
+    with patch("krita_cli._shared._get_client") as mock_get:
         mock_client = MagicMock(spec=KritaClient)
         mock_client.clear.return_value = {"status": "ok"}
         mock_get.return_value = mock_client
@@ -212,7 +212,7 @@ def test_cli_clear_success() -> None:
 
 def test_cli_undo_success() -> None:
     """Test undo command success path."""
-    with patch("krita_cli.cli._get_client") as mock_get:
+    with patch("krita_cli._shared._get_client") as mock_get:
         mock_client = MagicMock(spec=KritaClient)
         mock_client.undo.return_value = {"status": "ok"}
         mock_get.return_value = mock_client
@@ -222,7 +222,7 @@ def test_cli_undo_success() -> None:
 
 def test_cli_redo_success() -> None:
     """Test redo command success path."""
-    with patch("krita_cli.cli._get_client") as mock_get:
+    with patch("krita_cli._shared._get_client") as mock_get:
         mock_client = MagicMock(spec=KritaClient)
         mock_client.redo.return_value = {"status": "ok"}
         mock_get.return_value = mock_client
@@ -232,7 +232,7 @@ def test_cli_redo_success() -> None:
 
 def test_cli_get_color_at_success() -> None:
     """Test get-color-at command success path."""
-    with patch("krita_cli.cli._get_client") as mock_get:
+    with patch("krita_cli._shared._get_client") as mock_get:
         mock_client = MagicMock(spec=KritaClient)
         mock_client.get_color_at.return_value = {
             "status": "ok",
@@ -248,7 +248,7 @@ def test_cli_get_color_at_success() -> None:
 
 def test_cli_list_brushes_with_results() -> None:
     """Test list-brushes with results displayed as table."""
-    with patch("krita_cli.cli._get_client") as mock_get:
+    with patch("krita_cli._shared._get_client") as mock_get:
         mock_client = MagicMock(spec=KritaClient)
         mock_client.list_brushes.return_value = {"brushes": ["Soft", "Hard", "Basic"]}
         mock_get.return_value = mock_client
@@ -259,7 +259,7 @@ def test_cli_list_brushes_with_results() -> None:
 
 def test_cli_open_file_success() -> None:
     """Test open-file command success path."""
-    with patch("krita_cli.cli._get_client") as mock_get:
+    with patch("krita_cli._shared._get_client") as mock_get:
         mock_client = MagicMock(spec=KritaClient)
         mock_client.open_file.return_value = {
             "status": "ok",

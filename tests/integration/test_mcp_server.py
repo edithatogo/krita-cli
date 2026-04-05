@@ -5,6 +5,7 @@ from __future__ import annotations
 from unittest.mock import patch
 
 from krita_mcp.server import (
+    krita_batch,
     krita_clear,
     krita_draw_shape,
     krita_fill,
@@ -163,3 +164,48 @@ def test_krita_open_file_success() -> None:
         }
         result = krita_open_file(path="/tmp/test.kra")
         assert "test.kra" in result
+
+
+def test_krita_batch_success() -> None:
+    with patch("krita_mcp.server._get_client") as mock_get:
+        mock_client = mock_get.return_value
+        mock_client.batch.return_value = {
+            "status": "ok",
+            "results": [
+                {"action": "set_color", "status": "ok", "result": {"status": "ok"}},
+                {"action": "stroke", "status": "ok", "result": {"status": "ok"}},
+            ],
+            "count": 2,
+        }
+        result = krita_batch(commands=[{"action": "set_color", "params": {"color": "#ff0000"}}])
+        assert "2 succeeded" in result
+
+
+def test_krita_batch_with_errors() -> None:
+    with patch("krita_mcp.server._get_client") as mock_get:
+        mock_client = mock_get.return_value
+        mock_client.batch.return_value = {
+            "status": "error",
+            "results": [
+                {"action": "set_color", "status": "ok", "result": {"status": "ok"}},
+                {"action": "stroke", "status": "error", "result": {"error": "No active layer"}},
+            ],
+            "count": 2,
+        }
+        result = krita_batch(commands=[{"action": "set_color"}, {"action": "stroke"}])
+        assert "1 failed" in result
+        assert "No active layer" in result
+
+
+def test_krita_batch_stop_on_error() -> None:
+    with patch("krita_mcp.server._get_client") as mock_get:
+        mock_client = mock_get.return_value
+        mock_client.batch.return_value = {
+            "status": "error",
+            "results": [
+                {"action": "set_color", "status": "error", "error": "No active view"},
+            ],
+            "count": 1,
+        }
+        result = krita_batch(commands=[{"action": "set_color"}], stop_on_error=True)
+        assert "No active view" in result

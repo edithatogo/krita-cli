@@ -51,6 +51,57 @@ def test_health_connection_error(mock_client: KritaClient) -> None:
         mock_client.health()
 
 
+def test_health_with_protocol_version_string(mock_client: KritaClient, mock_response: MagicMock) -> None:
+    mock_response.json.return_value = {
+        "status": "ok",
+        "plugin": "kritamcp",
+        "protocol_version": "1.0.0",
+    }
+    result = mock_client.health()
+    assert result["status"] == "ok"
+    assert result["protocol_version"] == "1.0.0"
+
+
+def test_health_with_protocol_version_int(mock_client: KritaClient, mock_response: MagicMock) -> None:
+    mock_response.json.return_value = {
+        "status": "ok",
+        "plugin": "kritamcp",
+        "protocol_version": 1,
+    }
+    result = mock_client.health()
+    assert result["status"] == "ok"
+    assert result["protocol_version"] == 1
+
+
+def test_health_incompatible_protocol_version_string(mock_client: KritaClient, mock_response: MagicMock) -> None:
+    mock_response.json.return_value = {
+        "status": "ok",
+        "plugin": "kritamcp",
+        "protocol_version": "2.0.0",
+    }
+    with pytest.raises(KritaConnectionError) as exc_info:
+        mock_client.health()
+    assert exc_info.value.code == "INCOMPATIBLE_PROTOCOL"
+    assert "2.0.0" in str(exc_info.value)
+
+
+def test_health_incompatible_protocol_version_int(mock_client: KritaClient, mock_response: MagicMock) -> None:
+    mock_response.json.return_value = {
+        "status": "ok",
+        "plugin": "kritamcp",
+        "protocol_version": 99,
+    }
+    with pytest.raises(KritaConnectionError) as exc_info:
+        mock_client.health()
+    assert exc_info.value.code == "INCOMPATIBLE_PROTOCOL"
+
+
+def test_health_no_protocol_version(mock_client: KritaClient, mock_response: MagicMock) -> None:
+    mock_response.json.return_value = {"status": "ok", "plugin": "kritamcp"}
+    result = mock_client.health()
+    assert result["status"] == "ok"
+
+
 # -- Canvas operations --------------------------------------------------------
 
 
@@ -133,6 +184,25 @@ def test_batch(mock_client: KritaClient, mock_response: MagicMock) -> None:
     assert result["status"] == "ok"
 
 
+def test_batch_with_stop_on_error(mock_client: KritaClient, mock_response: MagicMock) -> None:
+    commands = [
+        {"action": "set_color", "params": {"color": "#ff0000"}},
+        {"action": "stroke", "params": {"points": [[0, 0], [100, 100]]}},
+    ]
+    result = mock_client.batch(commands, stop_on_error=True)
+    assert result["status"] == "ok"
+    call_args = mock_client._client.post.call_args
+    assert call_args[1]["json"]["params"]["stop_on_error"] is True
+
+
+def test_batch_empty_commands(mock_client: KritaClient) -> None:
+    config = ClientConfig(url="http://localhost:5678")
+    client = KritaClient(config)
+    client._client = MagicMock(spec=httpx.Client)
+    with pytest.raises(KritaValidationError):
+        client.batch([])
+
+
 # -- Generic command dispatch -------------------------------------------------
 
 
@@ -158,7 +228,7 @@ def test_http_status_error(mock_client: KritaClient) -> None:
     mock_client._client.post.side_effect = httpx.HTTPStatusError("error", request=MagicMock(), response=error_response)
     with pytest.raises(KritaCommandError) as exc_info:
         mock_client.set_color(color="#ff0000")
-    assert exc_info.value.code == "HTTP_500"
+    assert exc_info.value.code == "INTERNAL_ERROR"
 
 
 def test_generic_http_error(mock_client: KritaClient) -> None:

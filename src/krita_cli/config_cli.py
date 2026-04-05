@@ -63,12 +63,12 @@ def set_config(
     value: Annotated[str, typer.Argument(help="Configuration value")],
 ) -> None:
     """Set a plugin configuration value.
-    
+
     Common keys:
     - port: e.g., 5678
     - output_dir: e.g., ~/krita-mcp-output
     - max_canvas_dim: e.g., 8192
-    
+
     Changes require restarting Krita to take effect.
     """
     config = _read_config()
