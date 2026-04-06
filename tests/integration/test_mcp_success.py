@@ -174,3 +174,87 @@ def test_krita_open_file_success() -> None:
         mock_get.return_value = mock_client
         result = server_module.krita_open_file(path="/tmp/test.kra")
         assert "test.kra" in result
+
+
+def test_krita_select_rect_success() -> None:
+    with patch("krita_mcp.server._get_client") as mock_get:
+        mock_client = MagicMock()
+        mock_client.select_rect.return_value = {"status": "ok"}
+        mock_get.return_value = mock_client
+        result = server_module.krita_select_rect(x=10, y=20, width=100, height=200)
+        assert "rectangle" in result
+
+
+def test_krita_select_ellipse_success() -> None:
+    with patch("krita_mcp.server._get_client") as mock_get:
+        mock_client = MagicMock()
+        mock_client.select_ellipse.return_value = {"status": "ok"}
+        mock_get.return_value = mock_client
+        result = server_module.krita_select_ellipse(cx=50, cy=50, rx=30, ry=20)
+        assert "ellipse" in result
+
+
+def test_krita_select_polygon_success() -> None:
+    with patch("krita_mcp.server._get_client") as mock_get:
+        mock_client = MagicMock()
+        mock_client.select_polygon.return_value = {"status": "ok"}
+        mock_get.return_value = mock_client
+        result = server_module.krita_select_polygon(points=[[0, 0], [100, 0], [50, 100]])
+        assert "polygon" in result
+
+
+def test_krita_selection_info_has_selection() -> None:
+    with patch("krita_mcp.server._get_client") as mock_get:
+        mock_client = MagicMock()
+        mock_client.selection_info.return_value = {
+            "status": "ok", "has_selection": True,
+            "bounds": {"x": 10, "y": 20, "width": 100, "height": 200},
+        }
+        mock_get.return_value = mock_client
+        result = server_module.krita_selection_info()
+        assert "Selection" in result
+
+
+def test_krita_selection_info_no_selection() -> None:
+    with patch("krita_mcp.server._get_client") as mock_get:
+        mock_client = MagicMock()
+        mock_client.selection_info.return_value = {"status": "ok", "has_selection": False}
+        mock_get.return_value = mock_client
+        result = server_module.krita_selection_info()
+        assert "No active" in result
+
+
+def test_krita_clear_selection_success() -> None:
+    with patch("krita_mcp.server._get_client") as mock_get:
+        mock_client = MagicMock()
+        mock_client.clear_selection.return_value = {"status": "ok"}
+        mock_get.return_value = mock_client
+        result = server_module.krita_clear_selection()
+        assert "Cleared" in result
+
+
+def test_krita_invert_selection_success() -> None:
+    with patch("krita_mcp.server._get_client") as mock_get:
+        mock_client = MagicMock()
+        mock_client.invert_selection.return_value = {"status": "ok"}
+        mock_get.return_value = mock_client
+        result = server_module.krita_invert_selection()
+        assert "Inverted" in result
+
+
+def test_krita_fill_selection_success() -> None:
+    with patch("krita_mcp.server._get_client") as mock_get:
+        mock_client = MagicMock()
+        mock_client.fill_selection.return_value = {"status": "ok"}
+        mock_get.return_value = mock_client
+        result = server_module.krita_fill_selection()
+        assert "Filled" in result
+
+
+def test_krita_deselect_success() -> None:
+    with patch("krita_mcp.server._get_client") as mock_get:
+        mock_client = MagicMock()
+        mock_client.deselect.return_value = {"status": "ok"}
+        mock_get.return_value = mock_client
+        result = server_module.krita_deselect()
+        assert "Deselect" in result

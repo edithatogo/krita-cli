@@ -8,8 +8,8 @@ app = typer.Typer()
 console = Console()
 
 
-@app.command("select-area")
-def select_area(
+@app.command("select-rect")
+def select_rect(
     ctx: Context,
     x: int,
     y: int,
@@ -19,8 +19,59 @@ def select_area(
     """Select a rectangular area."""
     client = _shared._get_client(ctx)
     with _shared._handle_errors():
-        result = client.select_area(x=x, y=y, width=width, height=height)
-        _shared._print_result(result, f"Selected area {width}x{height} at ({x}, {y})")
+        result = client.select_rect(x=x, y=y, width=width, height=height)
+        _shared._print_result(result, f"Selected rectangle {width}x{height} at ({x}, {y})")
+
+
+@app.command("select-ellipse")
+def select_ellipse(
+    ctx: Context,
+    cx: int,
+    cy: int,
+    rx: int,
+    ry: int,
+) -> None:
+    """Select an elliptical area."""
+    client = _shared._get_client(ctx)
+    with _shared._handle_errors():
+        result = client.select_ellipse(cx=cx, cy=cy, rx=rx, ry=ry)
+        _shared._print_result(result, f"Selected ellipse at ({cx}, {cy}) with radii {rx}x{ry}")
+
+
+@app.command("select-polygon")
+def select_polygon(
+    ctx: Context,
+    points: list[str],
+) -> None:
+    """Select a polygonal area. Points as 'x,y' pairs (min 3)."""
+    parsed: list[list[int]] = []
+    for pt in points:
+        parts = pt.split(",")
+        if len(parts) != 2:
+            console.print(f"[red]Error:[/red] Invalid point format: {pt!r}. Use 'x,y'.")
+            raise typer.Exit(code=1)
+        try:
+            parsed.append([int(parts[0]), int(parts[1])])
+        except ValueError:
+            console.print(f"[red]Error:[/red] Invalid point coordinates: {pt!r}. Values must be integers.")
+            raise typer.Exit(code=1) from None
+
+    client = _shared._get_client(ctx)
+    with _shared._handle_errors():
+        result = client.select_polygon(points=parsed)
+        _shared._print_result(result, f"Selected polygon with {len(parsed)} points")
+
+
+@app.command("select-area")
+def select_area_compat(
+    ctx: Context,
+    x: int,
+    y: int,
+    width: int,
+    height: int,
+) -> None:
+    """Select a rectangular area (alias for select-rect)."""
+    select_rect(ctx, x, y, width, height)
 
 
 @app.command("select-clear")
@@ -48,3 +99,26 @@ def fill_selection(ctx: Context) -> None:
     with _shared._handle_errors():
         result = client.fill_selection()
         _shared._print_result(result, "Filled selection")
+
+
+@app.command("select-info")
+def selection_info(ctx: Context) -> None:
+    """Get information about the current selection."""
+    client = _shared._get_client(ctx)
+    with _shared._handle_errors():
+        result = client.selection_info()
+        if result.get("has_selection"):
+            bounds = result.get("bounds", {})
+            console.print(f"[green]Active selection:[/green] x={bounds.get('x')}, y={bounds.get('y')}, "
+                          f"w={bounds.get('width')}, h={bounds.get('height')}")
+        else:
+            console.print("[dim]No active selection[/dim]")
+
+
+@app.command("deselect")
+def deselect(ctx: Context) -> None:
+    """Remove the current selection."""
+    client = _shared._get_client(ctx)
+    with _shared._handle_errors():
+        result = client.deselect()
+        _shared._print_result(result, "Deselected")

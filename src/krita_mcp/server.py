@@ -541,5 +541,130 @@ def krita_get_current_brush() -> str:
         return _format_error(exc)
 
 
+@mcp.tool()
+def krita_select_rect(x: int, y: int, width: int, height: int) -> str:
+    """Select a rectangular area on the canvas.
+
+    Args:
+        x: X coordinate of top-left corner
+        y: Y coordinate of top-left corner
+        width: Width of the selection
+        height: Height of the selection
+    """
+    try:
+        client = _get_client()
+        result = client.select_rect(x=x, y=y, width=width, height=height)
+        if "error" in result:
+            return f"Error: {result['error']}"
+        return f"Selected rectangle {width}x{height} at ({x}, {y})"
+    except KritaError as exc:
+        return _format_error(exc)
+
+
+@mcp.tool()
+def krita_select_ellipse(cx: int, cy: int, rx: int, ry: int) -> str:
+    """Select an elliptical area on the canvas.
+
+    Args:
+        cx: X coordinate of center
+        cy: Y coordinate of center
+        rx: Horizontal radius
+        ry: Vertical radius
+    """
+    try:
+        client = _get_client()
+        result = client.select_ellipse(cx=cx, cy=cy, rx=rx, ry=ry)
+        if "error" in result:
+            return f"Error: {result['error']}"
+        return f"Selected ellipse at ({cx}, {cy}) with radii {rx}x{ry}"
+    except KritaError as exc:
+        return _format_error(exc)
+
+
+@mcp.tool()
+def krita_select_polygon(points: list[list[int]]) -> str:
+    """Select a polygonal area on the canvas.
+
+    Args:
+        points: List of [x, y] coordinate pairs (minimum 3 points)
+    """
+    try:
+        client = _get_client()
+        result = client.select_polygon(points=points)
+        if "error" in result:
+            return f"Error: {result['error']}"
+        return f"Selected polygon with {len(points)} points"
+    except KritaError as exc:
+        return _format_error(exc)
+
+
+@mcp.tool()
+def krita_selection_info() -> str:
+    """Get information about the current selection."""
+    try:
+        client = _get_client()
+        result = client.selection_info()
+        if "error" in result:
+            return f"Error: {result['error']}"
+        if result.get("has_selection"):
+            b: dict = result.get("bounds", {}) or {}
+            return f"Selection: x={b.get('x')}, y={b.get('y')}, w={b.get('width')}, h={b.get('height')}"
+        return "No active selection"
+    except KritaError as exc:
+        return _format_error(exc)
+
+
+@mcp.tool()
+def krita_clear_selection() -> str:
+    """Clear the content of the current selection."""
+    try:
+        client = _get_client()
+        result = client.clear_selection()
+        if "error" in result:
+            return f"Error: {result['error']}"
+        return "Cleared selection"
+    except KritaError as exc:
+        return _format_error(exc)
+
+
+@mcp.tool()
+def krita_invert_selection() -> str:
+    """Invert the current selection."""
+    try:
+        client = _get_client()
+        result = client.invert_selection()
+        if "error" in result:
+            return f"Error: {result['error']}"
+        return "Inverted selection"
+    except KritaError as exc:
+        return _format_error(exc)
+
+
+@mcp.tool()
+def krita_fill_selection() -> str:
+    """Fill the current selection with the foreground color."""
+    try:
+        client = _get_client()
+        result = client.fill_selection()
+        if "error" in result:
+            return f"Error: {result['error']}"
+        return "Filled selection"
+    except KritaError as exc:
+        return _format_error(exc)
+
+
+@mcp.tool()
+def krita_deselect() -> str:
+    """Remove the current selection."""
+    try:
+        client = _get_client()
+        result = client.deselect()
+        if "error" in result:
+            return f"Error: {result['error']}"
+        return "Deselected"
+    except KritaError as exc:
+        return _format_error(exc)
+
+
 if __name__ == "__main__":  # pragma: no cover
     mcp.run()
