@@ -666,5 +666,22 @@ def krita_deselect() -> str:
         return _format_error(exc)
 
 
+@mcp.tool()
+def krita_get_capabilities() -> str:
+    """Get detected API capabilities from the Krita plugin."""
+    try:
+        client = _get_client()
+        result = client.get_capabilities()
+        if "error" in result:
+            return f"Error: {result['error']}"
+        caps = result.get("capabilities", {})
+        available = result.get("selection_tools", [])
+        if available:
+            return f"Available selection tools: {', '.join(available)}"
+        return "No selection tools detected in this Krita version"
+    except KritaError as exc:
+        return _format_error(exc)
+
+
 if __name__ == "__main__":  # pragma: no cover
     mcp.run()

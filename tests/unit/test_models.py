@@ -314,6 +314,7 @@ def test_command_models_registry() -> None:
         "select_ellipse",
         "select_polygon",
         "selection_info",
+        "get_capabilities",
         "clear_selection",
         "invert_selection",
         "fill_selection",

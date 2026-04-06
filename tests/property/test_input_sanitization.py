@@ -14,7 +14,7 @@ from krita_client.models import (
     BatchRequest,
     NewCanvasParams,
     SaveParams,
-    SelectAreaParams,
+    SelectRectParams,
     SetColorParams,
     StrokeParams,
 )
@@ -177,7 +177,7 @@ class TestSelectAreaValidation:
         self, x: int, y: int, width: int, height: int
     ) -> None:
         """Valid selection parameters should create valid models."""
-        params = SelectAreaParams(x=x, y=y, width=width, height=height)
+        params = SelectRectParams(x=x, y=y, width=width, height=height)
         assert params.x == x
         assert params.y == y
         assert params.width == width

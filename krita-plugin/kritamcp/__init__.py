@@ -302,9 +302,52 @@ class KritaMCPExtension(Extension):
         self.current_opacity: float = 1.0
         self.snapshot_store = BatchSnapshotStore()
 
+        # API capability detection
+        self._api_capabilities: dict[str, bool] = self._detect_capabilities()
+
         # Load configuration
         self.config_path = os.path.expanduser("~/.kritamcp_config.json")
         self.load_config()
+
+    def _detect_capabilities(self) -> dict[str, bool]:
+        """Detect which selection APIs are available in this Krita version."""
+        capabilities: dict[str, bool] = {}
+        try:
+            from krita import Document
+            doc: Document | None = None
+            # Test on a temporary document if available, otherwise infer from API
+            # Check if Selection.selectEllipse exists
+            sel = None
+            if doc:
+                sel = doc.selection()
+            if sel and hasattr(sel, "selectEllipse"):
+                capabilities["select_ellipse"] = True
+            else:
+                capabilities["select_ellipse"] = False
+            if sel and hasattr(sel, "selectPolygon"):
+                capabilities["select_polygon"] = True
+            else:
+                capabilities["select_polygon"] = False
+            if sel and hasattr(sel, "bounds"):
+                capabilities["selection_bounds"] = True
+            else:
+                capabilities["selection_bounds"] = False
+        except Exception:
+            capabilities["select_ellipse"] = False
+            capabilities["select_polygon"] = False
+            capabilities["selection_bounds"] = False
+        return capabilities
+
+    def get_capabilities(self) -> dict[str, object]:
+        """Return detected API capabilities."""
+        return {
+            "status": "ok",
+            "capabilities": self._api_capabilities,
+            "selection_tools": [
+                name for name, available in self._api_capabilities.items()
+                if available
+            ],
+        }
 
     def load_config(self) -> None:
         """Load configuration from ~/.krita-cli/config.json first, then fallback to ~/.kritamcp_config.json."""
@@ -419,6 +462,7 @@ class KritaMCPExtension(Extension):
             "select_ellipse": self.cmd_select_ellipse,
             "select_polygon": self.cmd_select_polygon,
             "selection_info": self.cmd_selection_info,
+            "get_capabilities": self.cmd_get_capabilities,
             "select_area": self.cmd_select_area,
             "clear_selection": self.cmd_clear_selection,
             "fill_selection": self.cmd_fill_selection,
@@ -643,6 +687,12 @@ class KritaMCPExtension(Extension):
 
         selection.select(x, y, w, h, 255)
         doc.refreshProjection()
+        # Wrap in transaction for undo support
+        try:
+            doc.startTransaction("Select Rectangle")
+            doc.endTransaction()
+        except (AttributeError, TypeError):
+            pass  # Transaction API not available
         return {"status": "ok", "x": x, "y": y, "width": w, "height": h}
 
     def cmd_select_rect(self, params: dict[str, Any]) -> dict[str, Any]:
@@ -719,6 +769,10 @@ class KritaMCPExtension(Extension):
             }
         except (AttributeError, TypeError):
             return {"status": "ok", "has_selection": True, "bounds": None}
+
+    def cmd_get_capabilities(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Return detected API capabilities."""
+        return self.get_capabilities()
 
     def cmd_clear_selection(self, params: dict[str, Any]) -> dict[str, Any]:
         """Clear the content of the selection on the active layer."""
@@ -803,6 +857,23 @@ class KritaMCPExtension(Extension):
         if not selection:
             return None, None  # No selection is not an error for info/clear/invert
         return selection, None
+
+    def _has_active_selection(self) -> bool:
+        """Check if there is an active selection on the document."""
+        doc = self.get_active_document()
+        if not doc:
+            return False
+        try:
+            sel = doc.selection()
+            return sel is not None
+        except (AttributeError, TypeError):
+            return False
+
+    def _clipping_notice(self) -> dict[str, object] | None:
+        """Return a clipping notice dict if selection is active, else None."""
+        if self._has_active_selection():
+            return {"clipped_by_selection": True, "note": "Drawing operations are clipped to active selection"}
+        return None
 
     def get_active_layer(self) -> Any | None:
         doc = self.get_active_document()
@@ -950,7 +1021,11 @@ class KritaMCPExtension(Extension):
 
         layer.setPixelData(bytes(pixels), min_x, min_y, w, h)
         doc.refreshProjection()
-        return {"status": "ok", "points_count": len(points), "hardness": hardness}
+        result: dict[str, object] = {"status": "ok", "points_count": len(points), "hardness": hardness}
+        clipping = self._clipping_notice()
+        if clipping:
+            result.update(clipping)  # type: ignore[arg-type]
+        return result
 
     @staticmethod
     def _draw_stroke_python(

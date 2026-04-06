@@ -438,6 +438,10 @@ class KritaClient:
         """Get information about the current selection."""
         return self._send("selection_info", {})
 
+    def get_capabilities(self) -> dict[str, object]:
+        """Get detected API capabilities from the plugin."""
+        return self._send("get_capabilities", {})
+
     def clear_selection(self) -> dict[str, object]:
         """Clear the current selection."""
         return self._send("clear_selection", {})

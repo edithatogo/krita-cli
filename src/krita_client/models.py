@@ -396,6 +396,7 @@ COMMAND_MODELS: dict[str, type[BaseModel]] = {
     "select_ellipse": SelectEllipseParams,
     "select_polygon": SelectPolygonParams,
     "selection_info": SelectionInfoParams,
+    "get_capabilities": UndoParams,
     "clear_selection": ClearSelectionParams,
     "invert_selection": InvertSelectionParams,
     "fill_selection": FillSelectionParams,
