@@ -38,6 +38,7 @@ def test_error_code_values() -> None:
         "LAYER_LIMIT_EXCEEDED",
         "ROLLBACK_NOT_POSSIBLE",
         "BATCH_NOT_FOUND",
+        "PAYLOAD_TOO_LARGE",
     }
     assert {e.value for e in ErrorCode} == expected
 

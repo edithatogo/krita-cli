@@ -31,6 +31,7 @@ from PyQt5.QtCore import QThread, QTimer, QPolygon, QPoint
 from PyQt5.QtGui import QColor
 
 from kritamcp.history_store import CommandHistoryStore
+from kritamcp.payload_validator import validate_payload_size, MAX_PAYLOAD_SIZE
 from kritamcp.rate_limiter import RateLimiter
 from kritamcp.snapshot_store import BatchSnapshotStore
 
@@ -230,6 +231,13 @@ class PaintRequestHandler(BaseHTTPRequestHandler):
             return
 
         content_length = int(self.headers.get("Content-Length", 0))
+
+        # SECURITY: Validate payload size
+        payload_error = validate_payload_size(content_length)
+        if payload_error:
+            self.send_json_response(make_error(payload_error, code="PAYLOAD_TOO_LARGE", recoverable=True), 413)
+            return
+
         body = self.rfile.read(content_length).decode("utf-8")
 
         try:
@@ -463,6 +471,7 @@ class KritaMCPExtension(Extension):
             "select_polygon": self.cmd_select_polygon,
             "selection_info": self.cmd_selection_info,
             "get_capabilities": self.cmd_get_capabilities,
+            "get_security_status": self.cmd_get_security_status,
             "transform_selection": self.cmd_transform_selection,
             "grow_selection": self.cmd_grow_selection,
             "shrink_selection": self.cmd_shrink_selection,
@@ -778,6 +787,21 @@ class KritaMCPExtension(Extension):
     def cmd_get_capabilities(self, params: dict[str, Any]) -> dict[str, Any]:
         """Return detected API capabilities."""
         return self.get_capabilities()
+
+    def cmd_get_security_status(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Return current security limits and usage."""
+        return {
+            "status": "ok",
+            "rate_limit": {
+                "max_commands_per_minute": rate_limiter.max_commands,
+                "window_seconds": rate_limiter._window,
+                "current_usage": len(rate_limiter._timestamps),
+            },
+            "payload_limit": MAX_PAYLOAD_SIZE,
+            "batch_size_limit": MAX_BATCH_SIZE,
+            "max_canvas_dim": MAX_CANVAS_DIM,
+            "max_layers": MAX_LAYERS,
+        }
 
     def cmd_transform_selection(self, params: dict[str, Any]) -> dict[str, Any]:
         """Transform the current selection (move, rotate, scale)."""

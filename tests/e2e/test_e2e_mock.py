@@ -148,3 +148,14 @@ class TestE2ECapabilities:
         assert result["status"] == "ok"
         assert "capabilities" in result
         assert "selection_tools" in result
+
+
+class TestE2ESecurity:
+    """E2E security status tests."""
+
+    def test_get_security_status(self, e2e_client: KritaClient) -> None:
+        """Security status should return limits and usage."""
+        result = e2e_client.get_security_status()
+        assert result["status"] == "ok"
+        assert "rate_limit" in result
+        assert "payload_limit" in result

@@ -96,6 +96,7 @@ class MockKritaPluginHandler(BaseHTTPRequestHandler):
             "batch": self._cmd_batch,
             "get_command_history": self._cmd_history,
             "get_capabilities": self._cmd_capabilities,
+            "get_security_status": self._cmd_security_status,
         }
 
         handler = handlers.get(action)
@@ -178,6 +179,16 @@ class MockKritaPluginHandler(BaseHTTPRequestHandler):
             "status": "ok",
             "capabilities": {"select_ellipse": True, "select_polygon": True, "selection_bounds": True},
             "selection_tools": ["select_ellipse", "select_polygon", "selection_bounds"],
+        }
+
+    def _cmd_security_status(self, params: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "status": "ok",
+            "rate_limit": {"max_commands_per_minute": 60, "window_seconds": 60.0, "current_usage": 0},
+            "payload_limit": 10 * 1024 * 1024,
+            "batch_size_limit": 50,
+            "max_canvas_dim": 8192,
+            "max_layers": 100,
         }
 
     def _send_json(self, data: dict[str, Any], status: int = 200) -> None:

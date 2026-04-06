@@ -442,6 +442,10 @@ class KritaClient:
         """Get detected API capabilities from the plugin."""
         return self._send("get_capabilities", {})
 
+    def get_security_status(self) -> dict[str, object]:
+        """Get current security limits and usage from the plugin."""
+        return self._send("get_security_status", {})
+
     def transform_selection(
         self,
         *,

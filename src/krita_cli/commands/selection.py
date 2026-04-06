@@ -179,3 +179,18 @@ def border_selection(
     with _shared._handle_errors():
         result = client.border_selection(pixels)
         _shared._print_result(result, f"Created {pixels}px border around selection")
+
+
+@app.command("security-status")
+def security_status(ctx: Context) -> None:
+    """Show current security limits and usage."""
+    client = _shared._get_client(ctx)
+    with _shared._handle_errors():
+        result = client.get_security_status()
+        rl = result.get("rate_limit", {})
+        console.print(f"[green]Security Status:[/green]")
+        console.print(f"  Rate limit: [dim]{rl.get('current_usage', 0)}/{rl.get('max_commands_per_minute', '?')} per minute[/dim]")
+        console.print(f"  Payload limit: [dim]{result.get('payload_limit', 0) / (1024*1024):.0f}MB[/dim]")
+        console.print(f"  Batch limit: [dim]{result.get('batch_size_limit', '?')} commands[/dim]")
+        console.print(f"  Max canvas: [dim]{result.get('max_canvas_dim', '?')}x{result.get('max_canvas_dim', '?')}[/dim]")
+        console.print(f"  Max layers: [dim]{result.get('max_layers', '?')}[/dim]")

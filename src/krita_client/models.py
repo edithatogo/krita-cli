@@ -34,6 +34,7 @@ class ErrorCode(str, Enum):
     LAYER_LIMIT_EXCEEDED = "LAYER_LIMIT_EXCEEDED"
     ROLLBACK_NOT_POSSIBLE = "ROLLBACK_NOT_POSSIBLE"
     BATCH_NOT_FOUND = "BATCH_NOT_FOUND"
+    PAYLOAD_TOO_LARGE = "PAYLOAD_TOO_LARGE"
 
 
 class KritaErrorResponse(BaseModel):
@@ -422,6 +423,7 @@ COMMAND_MODELS: dict[str, type[BaseModel]] = {
     "select_polygon": SelectPolygonParams,
     "selection_info": SelectionInfoParams,
     "get_capabilities": UndoParams,
+    "get_security_status": UndoParams,
     "transform_selection": TransformSelectionParams,
     "grow_selection": ModifySelectionParams,
     "shrink_selection": ModifySelectionParams,

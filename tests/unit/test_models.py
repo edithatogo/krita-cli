@@ -324,6 +324,7 @@ def test_command_models_registry() -> None:
         "shrink_selection",
         "border_selection",
         "combine_selections",
+        "get_security_status",
         "get_command_history",
         "rollback",
     }

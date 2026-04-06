@@ -749,5 +749,25 @@ def krita_border_selection(pixels: int) -> str:
         return _format_error(exc)
 
 
+@mcp.tool()
+def krita_security_status() -> str:
+    """Get current security limits and usage from the Krita plugin."""
+    try:
+        client = _get_client()
+        result = client.get_security_status()
+        if "error" in result:
+            return f"Error: {result['error']}"
+        rl = result.get("rate_limit", {})
+        parts = [
+            f"Rate limit: {rl.get('current_usage', 0)}/{rl.get('max_commands_per_minute', '?')} per minute",
+            f"Payload limit: {result.get('payload_limit', '?') / (1024*1024):.0f}MB",
+            f"Batch limit: {result.get('batch_size_limit', '?')} commands",
+            f"Max canvas: {result.get('max_canvas_dim', '?')}x{result.get('max_canvas_dim', '?')}",
+        ]
+        return "Security status: " + " | ".join(parts)
+    except KritaError as exc:
+        return _format_error(exc)
+
+
 if __name__ == "__main__":  # pragma: no cover
     mcp.run()
