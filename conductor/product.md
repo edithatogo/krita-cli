@@ -51,6 +51,14 @@ Three layers:
 | `krita_open_file` | Open existing file |
 | `krita_batch` | Execute multiple commands sequentially |
 | `krita_rollback` | Roll back a batch operation by batch ID |
+| `krita_select_rect` | Select a rectangular area |
+| `krita_select_ellipse` | Select an elliptical area |
+| `krita_select_polygon` | Select a polygonal area |
+| `krita_selection_info` | Get current selection bounds |
+| `krita_invert_selection` | Invert the current selection |
+| `krita_clear_selection` | Clear selection contents |
+| `krita_fill_selection` | Fill selection with foreground color |
+| `krita_deselect` | Remove current selection |
 
 ## Completed (Phases 1-10)
 
@@ -76,7 +84,7 @@ Three layers:
 **Phase 11b: Layers & Canvas**
 - [/] Canvas state introspection (Client/CLI done)
 - [/] Layer management (Client/CLI done)
-- [ ] Selection tools
+- [x] Selection tools
 - [ ] Security & limits validation
 
 **Phase 11c: Batch & History**
