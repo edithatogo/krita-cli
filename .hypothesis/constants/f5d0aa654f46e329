@@ -1,4 +1,0 @@
-# file: C:\Users\60217257\repos\krita-cli\krita-mcp\src\krita_cli\commands\selection.py
-# hypothesis_version: 6.151.10
-
-['Cleared selection', 'Filled selection', 'Inverted selection', 'select-area', 'select-clear', 'select-fill', 'select-invert']

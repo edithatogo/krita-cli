@@ -98,9 +98,9 @@ class TestCommandHistoryStore:
 
         history = store.query(limit=10)
         assert len(history) == 3
-        # Oldest records should be evicted
-        assert history[0]["action"] == "action_2"
-        assert history[-1]["action"] == "action_4"
+        # Most recent first; oldest records should be evicted
+        assert history[0]["action"] == "action_4"
+        assert history[-1]["action"] == "action_2"
 
     def test_store_query_limit(self) -> None:
         """History store should respect query limit."""
@@ -119,8 +119,8 @@ class TestCommandHistoryStore:
         history = store.query(limit=2)
         assert len(history) == 2
         # Should return most recent first
-        assert history[0]["action"] == "action_3"
-        assert history[1]["action"] == "action_4"
+        assert history[0]["action"] == "action_4"
+        assert history[1]["action"] == "action_3"
 
     def test_store_thread_safety(self) -> None:
         """History store should be thread-safe under concurrent access."""

@@ -1,4 +1,0 @@
-# file: C:\Users\60217257\repos\krita-cli\krita-mcp\src\krita_cli\commands\stroke.py
-# hypothesis_version: 6.151.10
-
-[0.5, 1.0, 100, ',', '--fill/--no-fill', '--hardness', '--height', '--opacity', '--pressure', '--radius', '--size', '--stroke/--no-stroke', '--width', '--x2', '--y2', '-H', '-W', '-o', '-r', '-s', 'Brush size in pixels', 'Draw outline', 'End X for lines', 'End Y for lines', 'Fill the shape', 'Height', 'Width', 'X coordinate', 'Y coordinate', 'draw-shape']

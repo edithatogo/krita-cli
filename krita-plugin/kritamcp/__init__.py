@@ -27,12 +27,11 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any
 
 from krita import *
-import sys
 from PyQt5.QtCore import QThread, QTimer
 from PyQt5.QtGui import QColor
 
-from kritamcp.rate_limiter import RateLimiter
 from kritamcp.history_store import CommandHistoryStore
+from kritamcp.rate_limiter import RateLimiter
 from kritamcp.snapshot_store import BatchSnapshotStore
 
 # Try to import numpy for accelerated rendering
@@ -469,14 +468,14 @@ class KritaMCPExtension(Extension):
         view = self.get_active_view()
         if not view:
             return make_error("No active view", code="NO_ACTIVE_VIEW", recoverable=True)
-        
+
         fg = view.foregroundColor()
         bg = view.backgroundColor()
         canvas = view.canvas()
-        
+
         fg_q = fg.colorForCanvas(canvas)
         bg_q = bg.colorForCanvas(canvas)
-        
+
         return {
             "status": "ok",
             "foreground": fg_q.name(),
@@ -488,7 +487,7 @@ class KritaMCPExtension(Extension):
         view = self.get_active_view()
         if not view:
             return make_error("No active view", code="NO_ACTIVE_VIEW", recoverable=True)
-        
+
         preset = view.brushPreset()
         return {
             "status": "ok",
@@ -512,7 +511,7 @@ class KritaMCPExtension(Extension):
         doc = self.get_active_document()
         if not doc:
             return make_error("No active document", code="NO_ACTIVE_DOCUMENT", recoverable=True)
-        
+
         all_nodes = self._get_all_nodes(doc.rootNode())
         layers = []
         for node in all_nodes:
@@ -530,10 +529,10 @@ class KritaMCPExtension(Extension):
         doc = self.get_active_document()
         if not doc:
             return make_error("No active document", code="NO_ACTIVE_DOCUMENT", recoverable=True)
-        
+
         name = params.get("name", "New Layer")
         layer_type = params.get("layer_type", "paintlayer")
-        
+
         # SECURITY: limit layers to prevent resource exhaustion
         all_nodes = self._get_all_nodes(doc.rootNode())
         if len(all_nodes) >= MAX_LAYERS:
@@ -563,11 +562,11 @@ class KritaMCPExtension(Extension):
         name = params.get("name")
         if not name:
             return make_error("Missing layer name", code="INVALID_PARAMETERS", recoverable=True)
-        
+
         node = self._find_node(name)
         if not node:
             return make_error(f"Layer not found: {name}", code="LAYER_NOT_FOUND", recoverable=True)
-        
+
         doc = self.get_active_document()
         doc.setActiveNode(node)
         return {"status": "ok", "name": name}
@@ -578,7 +577,7 @@ class KritaMCPExtension(Extension):
         node = self._find_node(name)
         if not node:
             return make_error(f"Layer not found: {name}", code="LAYER_NOT_FOUND", recoverable=True)
-        
+
         doc = self.get_active_document()
         doc.removeNode(node)
         return {"status": "ok", "name": name}
@@ -590,7 +589,7 @@ class KritaMCPExtension(Extension):
         node = self._find_node(old_name)
         if not node:
             return make_error(f"Layer not found: {old_name}", code="LAYER_NOT_FOUND", recoverable=True)
-        
+
         node.setName(new_name)
         return {"status": "ok", "old_name": old_name, "new_name": new_name}
 
@@ -601,7 +600,7 @@ class KritaMCPExtension(Extension):
         node = self._find_node(name)
         if not node:
             return make_error(f"Layer not found: {name}", code="LAYER_NOT_FOUND", recoverable=True)
-        
+
         # Krita uses 0-255 for opacity internally but python API often takes float or int.
         # According to stubs, it takes float.
         node.setOpacity(opacity)
@@ -614,7 +613,7 @@ class KritaMCPExtension(Extension):
         node = self._find_node(name)
         if not node:
             return make_error(f"Layer not found: {name}", code="LAYER_NOT_FOUND", recoverable=True)
-        
+
         node.setVisible(visible)
         return {"status": "ok", "name": name, "visible": visible}
 
@@ -625,7 +624,7 @@ class KritaMCPExtension(Extension):
         doc = self.get_active_document()
         if not doc:
             return make_error("No active document", code="NO_ACTIVE_DOCUMENT", recoverable=True)
-        
+
         x = params.get("x", 0)
         y = params.get("y", 0)
         w = params.get("width", 100)
@@ -640,7 +639,7 @@ class KritaMCPExtension(Extension):
              # If selection() is not available in Document, this will raise.
              # In newer Krita API, you might need to create it.
              return make_error("Selection API not available in this Krita version", code="INTERNAL_ERROR", recoverable=False)
-        
+
         selection.select(x, y, w, h, 255) # 255 is opacity
         return {"status": "ok", "x": x, "y": y, "width": w, "height": h}
 
@@ -649,11 +648,11 @@ class KritaMCPExtension(Extension):
         doc = self.get_active_document()
         if not doc:
             return make_error("No active document", code="NO_ACTIVE_DOCUMENT", recoverable=True)
-        
+
         selection = doc.selection()
         if not selection:
              return {"status": "ok", "message": "No active selection to clear"}
-        
+
         selection.clear()
         doc.refreshProjection()
         return {"status": "ok"}
@@ -663,11 +662,11 @@ class KritaMCPExtension(Extension):
         doc = self.get_active_document()
         if not doc:
             return make_error("No active document", code="NO_ACTIVE_DOCUMENT", recoverable=True)
-        
+
         selection = doc.selection()
         if not selection:
              return {"status": "ok", "message": "No active selection to invert"}
-        
+
         selection.invert()
         doc.refreshProjection()
         return {"status": "ok"}
@@ -678,7 +677,7 @@ class KritaMCPExtension(Extension):
         view = self.get_active_view()
         if not doc or not view:
             return make_error("No active document/view", code="NO_ACTIVE_DOCUMENT", recoverable=True)
-        
+
         doc.fillSelection(view.foregroundColor())
         doc.refreshProjection()
         return {"status": "ok"}
@@ -688,7 +687,7 @@ class KritaMCPExtension(Extension):
         doc = self.get_active_document()
         if not doc:
             return make_error("No active document", code="NO_ACTIVE_DOCUMENT", recoverable=True)
-        
+
         doc.setSelection(None)
         doc.refreshProjection()
         return {"status": "ok"}

@@ -43,7 +43,8 @@ class CommandHistoryStore:
         with self._lock:
             # Return most recent first (deque is ordered oldest-first)
             records = list(self._records)
-            return records[-limit:] if limit < len(records) else records
+            result = records[-limit:] if limit < len(records) else records
+            return list(reversed(result))
 
     @property
     def max_size(self) -> int:

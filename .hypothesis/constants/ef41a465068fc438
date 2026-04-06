@@ -1,4 +1,0 @@
-# file: C:\Users\60217257\repos\krita-cli\krita-mcp\src\krita_cli\cli.py
-# hypothesis_version: 6.151.10
-
-['CLIState', '_format_result', '_get_client', '_handle_error', 'app', 'call', 'callback', 'clear', 'console', 'draw_shape', 'fill', 'get_canvas', 'get_color_at', 'health', 'list_brushes', 'main', 'new_canvas', 'open_file', 'redo', 'save', 'set_brush', 'set_color', 'stroke', 'undo']

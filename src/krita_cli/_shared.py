@@ -9,6 +9,7 @@ import typer
 from rich.console import Console
 from typer import Context
 
+from krita_cli.config_cmd import load_config
 from krita_client import (
     ClientConfig,
     ErrorCode,
@@ -67,9 +68,12 @@ def _handle_errors() -> Any:
 def _get_client(ctx: Context) -> KritaClient:
     """Create a Krita client from the Typer context."""
     state: CLIState = ctx.obj or CLIState()
-    config = ClientConfig()
     if state.url is not None:
         config = ClientConfig(url=state.url)
+    else:
+        plugin_config = load_config()
+        port = plugin_config.get("port", 5678)
+        config = ClientConfig(url=f"http://localhost:{port}")
     return KritaClient(config)
 
 

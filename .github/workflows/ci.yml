@@ -137,7 +137,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
       - run: uv sync --frozen
       - name: Python Semantic Release
-        uses: python-semantic-release/python-semantic-release@master
+        uses: python-semantic-release/python-semantic-release@v9.21.0
         with:
           github_token: ${{ secrets.GH_TOKEN }}
           pypi_token: ${{ secrets.PYPI_TOKEN }}

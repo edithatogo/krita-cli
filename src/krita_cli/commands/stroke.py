@@ -32,7 +32,11 @@ def stroke(
         if len(parts) != 2:
             console.print(f"[red]Error:[/red] Invalid point format: {pt!r}. Use 'x,y'.")
             raise typer.Exit(code=1)
-        parsed_points.append([int(parts[0]), int(parts[1])])
+        try:
+            parsed_points.append([int(parts[0]), int(parts[1])])
+        except ValueError:
+            console.print(f"[red]Error:[/red] Invalid point coordinates: {pt!r}. Values must be integers.")
+            raise typer.Exit(code=1) from None
 
     try:
         client = _shared._get_client(ctx)

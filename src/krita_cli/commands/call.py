@@ -29,8 +29,8 @@ def call(
 
     \b
     Examples:
-        krita call new-canvas '{"width": 1920, "height": 1080}'
-        krita call set-color '{"color": "#ff0000"}'
+        krita call new_canvas '{"width": 1920, "height": 1080}'
+        krita call set_color '{"color": "#ff0000"}'
         krita call stroke '{"points": [[0,0],[100,100]]}'
     """
     params: dict[str, object] = {}

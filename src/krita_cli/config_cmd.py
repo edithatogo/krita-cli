@@ -19,13 +19,21 @@ DEFAULTS: dict[str, Any] = {
     "canvas_output_dir": "~/krita-mcp-output",
     "default_timeout": 30.0,
     "export_timeout": 120.0,
+    "max_canvas_dim": 8192,
+    "max_batch_size": 50,
+    "max_layers": 100,
+    "max_commands_per_minute": 60,
 }
 
 
 def load_config() -> dict[str, Any]:
     """Load plugin configuration from disk, falling back to defaults."""
     if CONFIG_FILE.exists():
-        return json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+        try:
+            return json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            # Config file is corrupted; fall back to defaults
+            return dict(DEFAULTS)
     return dict(DEFAULTS)
 
 
