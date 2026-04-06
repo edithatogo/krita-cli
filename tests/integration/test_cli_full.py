@@ -125,7 +125,7 @@ def test_cli_stroke_with_url_option() -> None:
         mock_client = MagicMock(spec=KritaClient)
         mock_client.stroke.return_value = {"status": "ok"}
         mock_get.return_value = mock_client
-        result = runner.invoke(app, ["--url", "http://test:9999", "stroke", "0,0", "100,100"])
+        result = runner.invoke(app, ["--url", "http://test:9999", "stroke", "stroke", "0,0", "100,100"])
         assert result.exit_code == 0
 
 
@@ -146,7 +146,7 @@ def test_cli_new_canvas_success() -> None:
         mock_client = MagicMock(spec=KritaClient)
         mock_client.new_canvas.return_value = {"status": "ok", "width": 800, "height": 600}
         mock_get.return_value = mock_client
-        result = runner.invoke(app, ["new-canvas", "--width", "800", "--height", "600"])
+        result = runner.invoke(app, ["canvas", "new-canvas", "--width", "800", "--height", "600"])
         assert result.exit_code == 0
 
 
@@ -156,7 +156,7 @@ def test_cli_set_brush_success() -> None:
         mock_client = MagicMock(spec=KritaClient)
         mock_client.set_brush.return_value = {"status": "ok"}
         mock_get.return_value = mock_client
-        result = runner.invoke(app, ["set-brush", "--preset", "Soft", "--size", "50"])
+        result = runner.invoke(app, ["brush", "set-brush", "--preset", "Soft", "--size", "50"])
         assert result.exit_code == 0
 
 
@@ -166,7 +166,7 @@ def test_cli_fill_success() -> None:
         mock_client = MagicMock(spec=KritaClient)
         mock_client.fill.return_value = {"status": "ok"}
         mock_get.return_value = mock_client
-        result = runner.invoke(app, ["fill", "50", "50", "--radius", "30"])
+        result = runner.invoke(app, ["stroke", "fill", "50", "50", "--radius", "30"])
         assert result.exit_code == 0
 
 
@@ -176,7 +176,7 @@ def test_cli_draw_shape_success() -> None:
         mock_client = MagicMock(spec=KritaClient)
         mock_client.draw_shape.return_value = {"status": "ok"}
         mock_get.return_value = mock_client
-        result = runner.invoke(app, ["draw-shape", "rectangle", "0", "0"])
+        result = runner.invoke(app, ["stroke", "draw-shape", "rectangle", "0", "0"])
         assert result.exit_code == 0
 
 
@@ -186,7 +186,7 @@ def test_cli_get_canvas_success() -> None:
         mock_client = MagicMock(spec=KritaClient)
         mock_client.get_canvas.return_value = {"status": "ok", "path": "/tmp/canvas.png"}
         mock_get.return_value = mock_client
-        result = runner.invoke(app, ["get-canvas"])
+        result = runner.invoke(app, ["canvas", "get-canvas"])
         assert result.exit_code == 0
 
 
@@ -196,7 +196,7 @@ def test_cli_save_success() -> None:
         mock_client = MagicMock(spec=KritaClient)
         mock_client.save.return_value = {"status": "ok", "path": "/tmp/test.png"}
         mock_get.return_value = mock_client
-        result = runner.invoke(app, ["save", "/tmp/test.png"])
+        result = runner.invoke(app, ["canvas", "save", "/tmp/test.png"])
         assert result.exit_code == 0
 
 
@@ -206,7 +206,7 @@ def test_cli_clear_success() -> None:
         mock_client = MagicMock(spec=KritaClient)
         mock_client.clear.return_value = {"status": "ok"}
         mock_get.return_value = mock_client
-        result = runner.invoke(app, ["clear"])
+        result = runner.invoke(app, ["canvas", "clear"])
         assert result.exit_code == 0
 
 
@@ -216,7 +216,7 @@ def test_cli_undo_success() -> None:
         mock_client = MagicMock(spec=KritaClient)
         mock_client.undo.return_value = {"status": "ok"}
         mock_get.return_value = mock_client
-        result = runner.invoke(app, ["undo"])
+        result = runner.invoke(app, ["navigation", "undo"])
         assert result.exit_code == 0
 
 
@@ -226,7 +226,7 @@ def test_cli_redo_success() -> None:
         mock_client = MagicMock(spec=KritaClient)
         mock_client.redo.return_value = {"status": "ok"}
         mock_get.return_value = mock_client
-        result = runner.invoke(app, ["redo"])
+        result = runner.invoke(app, ["navigation", "redo"])
         assert result.exit_code == 0
 
 
@@ -242,7 +242,7 @@ def test_cli_get_color_at_success() -> None:
             "b": 0,
         }
         mock_get.return_value = mock_client
-        result = runner.invoke(app, ["get-color-at", "10", "20"])
+        result = runner.invoke(app, ["color", "get-color-at", "10", "20"])
         assert result.exit_code == 0
 
 
@@ -252,7 +252,7 @@ def test_cli_list_brushes_with_results() -> None:
         mock_client = MagicMock(spec=KritaClient)
         mock_client.list_brushes.return_value = {"brushes": ["Soft", "Hard", "Basic"]}
         mock_get.return_value = mock_client
-        result = runner.invoke(app, ["list-brushes"])
+        result = runner.invoke(app, ["brush", "list-brushes"])
         assert result.exit_code == 0
         assert "Soft" in result.output
 
@@ -268,5 +268,5 @@ def test_cli_open_file_success() -> None:
             "height": 600,
         }
         mock_get.return_value = mock_client
-        result = runner.invoke(app, ["open-file", "/tmp/test.kra"])
+        result = runner.invoke(app, ["file", "open-file", "/tmp/test.kra"])
         assert result.exit_code == 0

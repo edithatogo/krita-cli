@@ -29,7 +29,7 @@ def test_cli_health_connection_error() -> None:
 
 
 def test_cli_stroke_invalid_point_format() -> None:
-    result = runner.invoke(app, ["stroke", "invalid"])
+    result = runner.invoke(app, ["stroke", "stroke", "invalid"])
     assert result.exit_code == 1
     assert "Invalid point format" in result.output
 
@@ -42,8 +42,10 @@ def test_cli_call_invalid_json() -> None:
 
 def test_cli_list_commands() -> None:
     result = runner.invoke(app, ["--help"])
-    assert "new-canvas" in result.output
-    assert "set-color" in result.output
+    assert "canvas" in result.output
+    assert "color" in result.output
     assert "stroke" in result.output
     assert "health" in result.output
     assert "call" in result.output
+    assert "selection" in result.output
+    assert "batch" in result.output

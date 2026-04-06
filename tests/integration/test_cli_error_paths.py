@@ -38,96 +38,96 @@ def _mock_error_client() -> MagicMock:
 def test_cli_new_canvas_error_path() -> None:
     with patch("krita_cli._shared._get_client") as mock_get:
         mock_get.return_value = _mock_error_client()
-        result = runner.invoke(app, ["new-canvas"])
+        result = runner.invoke(app, ["canvas", "new-canvas"])
         assert result.exit_code == 1
 
 
 def test_cli_set_color_error_path() -> None:
     with patch("krita_cli._shared._get_client") as mock_get:
         mock_get.return_value = _mock_error_client()
-        result = runner.invoke(app, ["set-color", "#ff0000"])
+        result = runner.invoke(app, ["color", "set-color", "#ff0000"])
         assert result.exit_code == 1
 
 
 def test_cli_set_brush_error_path() -> None:
     with patch("krita_cli._shared._get_client") as mock_get:
         mock_get.return_value = _mock_error_client()
-        result = runner.invoke(app, ["set-brush"])
+        result = runner.invoke(app, ["brush", "set-brush"])
         assert result.exit_code == 1
 
 
 def test_cli_stroke_error_path() -> None:
     with patch("krita_cli._shared._get_client") as mock_get:
         mock_get.return_value = _mock_error_client()
-        result = runner.invoke(app, ["stroke", "0,0", "100,100"])
+        result = runner.invoke(app, ["stroke", "stroke", "0,0", "100,100"])
         assert result.exit_code == 1
 
 
 def test_cli_fill_error_path() -> None:
     with patch("krita_cli._shared._get_client") as mock_get:
         mock_get.return_value = _mock_error_client()
-        result = runner.invoke(app, ["fill", "50", "50"])
+        result = runner.invoke(app, ["stroke", "fill", "50", "50"])
         assert result.exit_code == 1
 
 
 def test_cli_draw_shape_error_path() -> None:
     with patch("krita_cli._shared._get_client") as mock_get:
         mock_get.return_value = _mock_error_client()
-        result = runner.invoke(app, ["draw-shape", "rectangle", "0", "0"])
+        result = runner.invoke(app, ["stroke", "draw-shape", "rectangle", "0", "0"])
         assert result.exit_code == 1
 
 
 def test_cli_get_canvas_error_path() -> None:
     with patch("krita_cli._shared._get_client") as mock_get:
         mock_get.return_value = _mock_error_client()
-        result = runner.invoke(app, ["get-canvas"])
+        result = runner.invoke(app, ["canvas", "get-canvas"])
         assert result.exit_code == 1
 
 
 def test_cli_save_error_path() -> None:
     with patch("krita_cli._shared._get_client") as mock_get:
         mock_get.return_value = _mock_error_client()
-        result = runner.invoke(app, ["save", "/tmp/test.png"])
+        result = runner.invoke(app, ["canvas", "save", "/tmp/test.png"])
         assert result.exit_code == 1
 
 
 def test_cli_clear_error_path() -> None:
     with patch("krita_cli._shared._get_client") as mock_get:
         mock_get.return_value = _mock_error_client()
-        result = runner.invoke(app, ["clear"])
+        result = runner.invoke(app, ["canvas", "clear"])
         assert result.exit_code == 1
 
 
 def test_cli_undo_error_path() -> None:
     with patch("krita_cli._shared._get_client") as mock_get:
         mock_get.return_value = _mock_error_client()
-        result = runner.invoke(app, ["undo"])
+        result = runner.invoke(app, ["navigation", "undo"])
         assert result.exit_code == 1
 
 
 def test_cli_redo_error_path() -> None:
     with patch("krita_cli._shared._get_client") as mock_get:
         mock_get.return_value = _mock_error_client()
-        result = runner.invoke(app, ["redo"])
+        result = runner.invoke(app, ["navigation", "redo"])
         assert result.exit_code == 1
 
 
 def test_cli_get_color_at_error_path() -> None:
     with patch("krita_cli._shared._get_client") as mock_get:
         mock_get.return_value = _mock_error_client()
-        result = runner.invoke(app, ["get-color-at", "10", "20"])
+        result = runner.invoke(app, ["color", "get-color-at", "10", "20"])
         assert result.exit_code == 1
 
 
 def test_cli_list_brushes_error_path() -> None:
     with patch("krita_cli._shared._get_client") as mock_get:
         mock_get.return_value = _mock_error_client()
-        result = runner.invoke(app, ["list-brushes"])
+        result = runner.invoke(app, ["brush", "list-brushes"])
         assert result.exit_code == 1
 
 
 def test_cli_open_file_error_path() -> None:
     with patch("krita_cli._shared._get_client") as mock_get:
         mock_get.return_value = _mock_error_client()
-        result = runner.invoke(app, ["open-file", "/tmp/test.kra"])
+        result = runner.invoke(app, ["file", "open-file", "/tmp/test.kra"])
         assert result.exit_code == 1

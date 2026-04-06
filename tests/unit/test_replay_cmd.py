@@ -21,7 +21,7 @@ def test_replay_dry_run_valid(tmp_path) -> None:
     replay_file = tmp_path / "replay.json"
     replay_file.write_text(json.dumps(records))
 
-    result = runner.invoke(app, ["replay", str(replay_file), "--dry-run"])
+    result = runner.invoke(app, ["replay", "replay", str(replay_file), "--dry-run"])
     assert result.exit_code == 0
     assert "All 2 records are valid" in result.stdout
 
@@ -32,7 +32,7 @@ def test_replay_dry_run_missing_action(tmp_path) -> None:
     replay_file = tmp_path / "replay.json"
     replay_file.write_text(json.dumps(records))
 
-    result = runner.invoke(app, ["replay", str(replay_file), "--dry-run"])
+    result = runner.invoke(app, ["replay", "replay", str(replay_file), "--dry-run"])
     assert "Missing 'action'" in result.stdout
 
 
@@ -41,7 +41,7 @@ def test_replay_invalid_json(tmp_path) -> None:
     replay_file = tmp_path / "bad.json"
     replay_file.write_text("{not json]")
 
-    result = runner.invoke(app, ["replay", str(replay_file)])
+    result = runner.invoke(app, ["replay", "replay", str(replay_file)])
     assert result.exit_code == 1
     assert "Invalid JSON" in result.stdout
 
@@ -51,7 +51,7 @@ def test_replay_not_a_list(tmp_path) -> None:
     replay_file = tmp_path / "obj.json"
     replay_file.write_text(json.dumps({"action": "set_color"}))
 
-    result = runner.invoke(app, ["replay", str(replay_file)])
+    result = runner.invoke(app, ["replay", "replay", str(replay_file)])
     assert result.exit_code == 1
     assert "must contain an array" in result.stdout
 
@@ -70,7 +70,7 @@ def test_replay_execution(tmp_path) -> None:
         mock_client.send_command.return_value = {"status": "ok"}
         mock_get_client.return_value = mock_client
 
-        result = runner.invoke(app, ["replay", str(replay_file), "--speed", "0.0"])
+        result = runner.invoke(app, ["replay", "replay", str(replay_file), "--speed", "0.0"])
 
         assert result.exit_code == 0
         assert mock_client.send_command.call_count == 2
