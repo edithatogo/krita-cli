@@ -769,5 +769,46 @@ def krita_security_status() -> str:
         return _format_error(exc)
 
 
+@mcp.tool()
+def krita_list_tools() -> str:
+    """List all available Krita MCP tools with descriptions."""
+    tools = [
+        ("krita_health", "Check Krita + plugin status"),
+        ("krita_new_canvas", "Create canvas (width, height, bg color)"),
+        ("krita_set_color", "Set foreground color (hex)"),
+        ("krita_set_brush", "Set brush preset/size/opacity"),
+        ("krita_stroke", "Paint stroke through [x, y] points"),
+        ("krita_fill", "Fill circular area"),
+        ("krita_draw_shape", "Draw rectangle/ellipse/line"),
+        ("krita_get_canvas", "Export canvas to PNG"),
+        ("krita_save", "Save canvas to file"),
+        ("krita_undo", "Undo last action"),
+        ("krita_redo", "Redo last action"),
+        ("krita_clear", "Clear canvas"),
+        ("krita_get_color_at", "Eyedropper - get color at pixel"),
+        ("krita_list_brushes", "List brush presets"),
+        ("krita_open_file", "Open existing file"),
+        ("krita_batch", "Execute multiple commands sequentially"),
+        ("krita_rollback", "Roll back a batch operation"),
+        ("krita_select_rect", "Select a rectangular area"),
+        ("krita_select_ellipse", "Select an elliptical area"),
+        ("krita_select_polygon", "Select a polygonal area"),
+        ("krita_selection_info", "Get current selection bounds"),
+        ("krita_invert_selection", "Invert the current selection"),
+        ("krita_clear_selection", "Clear selection contents"),
+        ("krita_fill_selection", "Fill selection with foreground color"),
+        ("krita_deselect", "Remove current selection"),
+        ("krita_transform_selection", "Move/rotate/scale selection"),
+        ("krita_grow_selection", "Grow selection by N pixels"),
+        ("krita_shrink_selection", "Shrink selection by N pixels"),
+        ("krita_border_selection", "Create border around selection"),
+        ("krita_get_capabilities", "Get detected API capabilities"),
+        ("krita_security_status", "Get security limits and usage"),
+        ("krita_list_tools", "List all available MCP tools"),
+    ]
+    lines = [f"- **{name}**: {desc}" for name, desc in tools]
+    return f"Available Krita MCP tools ({len(tools)} total):\n" + "\n".join(lines)
+
+
 if __name__ == "__main__":  # pragma: no cover
     mcp.run()
