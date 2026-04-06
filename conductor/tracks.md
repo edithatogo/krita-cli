@@ -6,7 +6,7 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [x] **Track: Implement Batch Operations Endpoint**
   *Link: [./tracks/implement_batch_operations_endpoint_20260405/](./tracks/implement_batch_operations_endpoint_20260405/)*
-- [~] **Track: Selection Tools**
+- [x] **Track: Selection Tools**
   *Link: [./tracks/selection_tools_20260406/](./tracks/selection_tools_20260406/)*
 - [ ] **Track: Security & Limits Validation**
   *Link: [./tracks/security_limits_validation_20260406/](./tracks/security_limits_validation_20260406/)*
