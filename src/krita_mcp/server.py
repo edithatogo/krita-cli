@@ -683,5 +683,71 @@ def krita_get_capabilities() -> str:
         return _format_error(exc)
 
 
+@mcp.tool()
+def krita_transform_selection(
+    dx: int = 0,
+    dy: int = 0,
+    angle: float = 0.0,
+    scale_x: float = 1.0,
+    scale_y: float = 1.0,
+) -> str:
+    """Transform the current selection (move, rotate, scale).
+
+    Args:
+        dx: Horizontal offset in pixels
+        dy: Vertical offset in pixels
+        angle: Rotation angle in degrees
+        scale_x: Horizontal scale factor
+        scale_y: Vertical scale factor
+    """
+    try:
+        client = _get_client()
+        result = client.transform_selection(dx=dx, dy=dy, angle=angle, scale_x=scale_x, scale_y=scale_y)
+        if "error" in result:
+            return f"Error: {result['error']}"
+        return f"Transformed selection (dx={dx}, dy={dy}, angle={angle}°)"
+    except KritaError as exc:
+        return _format_error(exc)
+
+
+@mcp.tool()
+def krita_grow_selection(pixels: int) -> str:
+    """Grow the current selection outward by N pixels."""
+    try:
+        client = _get_client()
+        result = client.grow_selection(pixels)
+        if "error" in result:
+            return f"Error: {result['error']}"
+        return f"Grew selection by {pixels}px"
+    except KritaError as exc:
+        return _format_error(exc)
+
+
+@mcp.tool()
+def krita_shrink_selection(pixels: int) -> str:
+    """Shrink the current selection inward by N pixels."""
+    try:
+        client = _get_client()
+        result = client.shrink_selection(pixels)
+        if "error" in result:
+            return f"Error: {result['error']}"
+        return f"Shrunk selection by {pixels}px"
+    except KritaError as exc:
+        return _format_error(exc)
+
+
+@mcp.tool()
+def krita_border_selection(pixels: int) -> str:
+    """Create a border selection around the current selection."""
+    try:
+        client = _get_client()
+        result = client.border_selection(pixels)
+        if "error" in result:
+            return f"Error: {result['error']}"
+        return f"Created {pixels}px border around selection"
+    except KritaError as exc:
+        return _format_error(exc)
+
+
 if __name__ == "__main__":  # pragma: no cover
     mcp.run()

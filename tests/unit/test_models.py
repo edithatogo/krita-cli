@@ -319,6 +319,11 @@ def test_command_models_registry() -> None:
         "invert_selection",
         "fill_selection",
         "deselect",
+        "transform_selection",
+        "grow_selection",
+        "shrink_selection",
+        "border_selection",
+        "combine_selections",
         "get_command_history",
         "rollback",
     }

@@ -1,5 +1,6 @@
 import typer
 from rich.console import Console
+from typing import Annotated
 from typer import Context
 
 from krita_cli import _shared
@@ -126,3 +127,55 @@ def deselect(ctx: Context) -> None:
     with _shared._handle_errors():
         result = client.deselect()
         _shared._print_result(result, "Deselected")
+
+
+@app.command("transform-selection")
+def transform_selection(
+    ctx: Context,
+    dx: Annotated[int, typer.Option("--dx", help="Horizontal offset")] = 0,
+    dy: Annotated[int, typer.Option("--dy", help="Vertical offset")] = 0,
+    angle: Annotated[float, typer.Option("--angle", "-a", help="Rotation angle in degrees")] = 0.0,
+    scale_x: Annotated[float, typer.Option("--scale-x", help="Horizontal scale factor")] = 1.0,
+    scale_y: Annotated[float, typer.Option("--scale-y", help="Vertical scale factor")] = 1.0,
+) -> None:
+    """Transform the current selection (move, rotate, scale)."""
+    client = _shared._get_client(ctx)
+    with _shared._handle_errors():
+        result = client.transform_selection(dx=dx, dy=dy, angle=angle, scale_x=scale_x, scale_y=scale_y)
+        _shared._print_result(result, f"Transformed selection (dx={dx}, dy={dy}, angle={angle}°)")
+
+
+@app.command("grow-selection")
+def grow_selection(
+    ctx: Context,
+    pixels: Annotated[int, typer.Argument(help="Pixels to grow")],
+) -> None:
+    """Grow the current selection outward."""
+    client = _shared._get_client(ctx)
+    with _shared._handle_errors():
+        result = client.grow_selection(pixels)
+        _shared._print_result(result, f"Grew selection by {pixels}px")
+
+
+@app.command("shrink-selection")
+def shrink_selection(
+    ctx: Context,
+    pixels: Annotated[int, typer.Argument(help="Pixels to shrink")],
+) -> None:
+    """Shrink the current selection inward."""
+    client = _shared._get_client(ctx)
+    with _shared._handle_errors():
+        result = client.shrink_selection(pixels)
+        _shared._print_result(result, f"Shrunk selection by {pixels}px")
+
+
+@app.command("border-selection")
+def border_selection(
+    ctx: Context,
+    pixels: Annotated[int, typer.Argument(help="Border width in pixels")],
+) -> None:
+    """Create a border selection around the current selection."""
+    client = _shared._get_client(ctx)
+    with _shared._handle_errors():
+        result = client.border_selection(pixels)
+        _shared._print_result(result, f"Created {pixels}px border around selection")

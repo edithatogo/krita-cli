@@ -292,6 +292,31 @@ class DeselectParams(BaseModel):
     """Parameters for deselecting (empty)."""
 
 
+# -- Selection transforms & modifiers -----------------------------------------
+
+
+class TransformSelectionParams(BaseModel):
+    """Parameters for transforming the current selection."""
+
+    dx: int = 0
+    dy: int = 0
+    angle: float = 0.0
+    scale_x: Annotated[float, Field(gt=0.0)] = 1.0
+    scale_y: Annotated[float, Field(gt=0.0)] = 1.0
+
+
+class ModifySelectionParams(BaseModel):
+    """Parameters for grow/shrink/border operations."""
+
+    pixels: Annotated[int, Field(ge=1, le=1000)]
+
+
+class CombineSelectionParams(BaseModel):
+    """Parameters for selection combination operations."""
+
+    operation: Literal["union", "intersect", "subtract"]
+
+
 # -- Batch operations ---------------------------------------------------------
 
 
@@ -397,6 +422,11 @@ COMMAND_MODELS: dict[str, type[BaseModel]] = {
     "select_polygon": SelectPolygonParams,
     "selection_info": SelectionInfoParams,
     "get_capabilities": UndoParams,
+    "transform_selection": TransformSelectionParams,
+    "grow_selection": ModifySelectionParams,
+    "shrink_selection": ModifySelectionParams,
+    "border_selection": ModifySelectionParams,
+    "combine_selections": CombineSelectionParams,
     "clear_selection": ClearSelectionParams,
     "invert_selection": InvertSelectionParams,
     "fill_selection": FillSelectionParams,

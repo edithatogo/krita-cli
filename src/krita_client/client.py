@@ -442,6 +442,55 @@ class KritaClient:
         """Get detected API capabilities from the plugin."""
         return self._send("get_capabilities", {})
 
+    def transform_selection(
+        self,
+        *,
+        dx: int = 0,
+        dy: int = 0,
+        angle: float = 0.0,
+        scale_x: float = 1.0,
+        scale_y: float = 1.0,
+    ) -> dict[str, object]:
+        """Transform the current selection (move, rotate, scale)."""
+        from krita_client.models import TransformSelectionParams
+
+        validated = self._validate(
+            TransformSelectionParams,
+            {"dx": dx, "dy": dy, "angle": angle, "scale_x": scale_x, "scale_y": scale_y},
+        )
+        return self._send("transform_selection", validated)
+
+    def grow_selection(self, pixels: int) -> dict[str, object]:
+        """Grow the current selection outward by N pixels."""
+        from krita_client.models import ModifySelectionParams
+
+        validated = self._validate(ModifySelectionParams, {"pixels": pixels})
+        return self._send("grow_selection", validated)
+
+    def shrink_selection(self, pixels: int) -> dict[str, object]:
+        """Shrink the current selection inward by N pixels."""
+        from krita_client.models import ModifySelectionParams
+
+        validated = self._validate(ModifySelectionParams, {"pixels": pixels})
+        return self._send("shrink_selection", validated)
+
+    def border_selection(self, pixels: int) -> dict[str, object]:
+        """Create a border selection of N pixels around the current selection."""
+        from krita_client.models import ModifySelectionParams
+
+        validated = self._validate(ModifySelectionParams, {"pixels": pixels})
+        return self._send("border_selection", validated)
+
+    def combine_selections(
+        self,
+        operation: str,
+    ) -> dict[str, object]:
+        """Combine selections using union, intersect, or subtract."""
+        from krita_client.models import CombineSelectionParams
+
+        validated = self._validate(CombineSelectionParams, {"operation": operation})
+        return self._send("combine_selections", validated)
+
     def clear_selection(self) -> dict[str, object]:
         """Clear the current selection."""
         return self._send("clear_selection", {})

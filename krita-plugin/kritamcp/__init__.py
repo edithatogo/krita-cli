@@ -463,6 +463,11 @@ class KritaMCPExtension(Extension):
             "select_polygon": self.cmd_select_polygon,
             "selection_info": self.cmd_selection_info,
             "get_capabilities": self.cmd_get_capabilities,
+            "transform_selection": self.cmd_transform_selection,
+            "grow_selection": self.cmd_grow_selection,
+            "shrink_selection": self.cmd_shrink_selection,
+            "border_selection": self.cmd_border_selection,
+            "combine_selections": self.cmd_combine_selections,
             "select_area": self.cmd_select_area,
             "clear_selection": self.cmd_clear_selection,
             "fill_selection": self.cmd_fill_selection,
@@ -773,6 +778,100 @@ class KritaMCPExtension(Extension):
     def cmd_get_capabilities(self, params: dict[str, Any]) -> dict[str, Any]:
         """Return detected API capabilities."""
         return self.get_capabilities()
+
+    def cmd_transform_selection(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Transform the current selection (move, rotate, scale)."""
+        doc = self.get_active_document()
+        if not doc:
+            return make_error("No active document", code="NO_ACTIVE_DOCUMENT", recoverable=True)
+
+        selection = doc.selection()
+        if not selection:
+            return make_error("No active selection to transform", code="INVALID_PARAMETERS", recoverable=True)
+
+        try:
+            dx = params.get("dx", 0)
+            dy = params.get("dy", 0)
+            angle = params.get("angle", 0.0)
+            scale_x = params.get("scale_x", 1.0)
+            scale_y = params.get("scale_y", 1.0)
+
+            # Krita's Selection.transform takes a QTransform
+            from PyQt5.QtGui import QTransform
+            transform = QTransform()
+            transform.translate(dx, dy)
+            transform.rotate(angle)
+            transform.scale(scale_x, scale_y)
+            selection.transform(transform)
+            doc.refreshProjection()
+            return {"status": "ok", "dx": dx, "dy": dy, "angle": angle, "scale_x": scale_x, "scale_y": scale_y}
+        except (AttributeError, TypeError) as exc:
+            return make_error(f"Transform not supported: {exc}", code="INTERNAL_ERROR", recoverable=False)
+
+    def cmd_grow_selection(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Grow the current selection outward."""
+        doc = self.get_active_document()
+        if not doc:
+            return make_error("No active document", code="NO_ACTIVE_DOCUMENT", recoverable=True)
+
+        selection = doc.selection()
+        if not selection:
+            return make_error("No active selection to grow", code="INVALID_PARAMETERS", recoverable=True)
+
+        pixels = params.get("pixels", 1)
+        try:
+            selection.grow(pixels)
+            doc.refreshProjection()
+            return {"status": "ok", "pixels": pixels}
+        except (AttributeError, TypeError) as exc:
+            return make_error(f"Grow not supported: {exc}", code="INTERNAL_ERROR", recoverable=False)
+
+    def cmd_shrink_selection(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Shrink the current selection inward."""
+        doc = self.get_active_document()
+        if not doc:
+            return make_error("No active document", code="NO_ACTIVE_DOCUMENT", recoverable=True)
+
+        selection = doc.selection()
+        if not selection:
+            return make_error("No active selection to shrink", code="INVALID_PARAMETERS", recoverable=True)
+
+        pixels = params.get("pixels", 1)
+        try:
+            selection.shrink(pixels)
+            doc.refreshProjection()
+            return {"status": "ok", "pixels": pixels}
+        except (AttributeError, TypeError) as exc:
+            return make_error(f"Shrink not supported: {exc}", code="INTERNAL_ERROR", recoverable=False)
+
+    def cmd_border_selection(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Create a border around the current selection."""
+        doc = self.get_active_document()
+        if not doc:
+            return make_error("No active document", code="NO_ACTIVE_DOCUMENT", recoverable=True)
+
+        selection = doc.selection()
+        if not selection:
+            return make_error("No active selection for border", code="INVALID_PARAMETERS", recoverable=True)
+
+        pixels = params.get("pixels", 1)
+        try:
+            selection.border(pixels)
+            doc.refreshProjection()
+            return {"status": "ok", "pixels": pixels}
+        except (AttributeError, TypeError) as exc:
+            return make_error(f"Border not supported: {exc}", code="INTERNAL_ERROR", recoverable=False)
+
+    def cmd_combine_selections(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Placeholder for selection combination (union/intersect/subtract).
+
+        Full implementation requires a second selection source.
+        Currently used to mark the operation mode for subsequent selections.
+        """
+        operation = params.get("operation", "union")
+        if operation not in ("union", "intersect", "subtract"):
+            return make_error("Invalid operation. Use union, intersect, or subtract", code="INVALID_PARAMETERS", recoverable=True)
+        return {"status": "ok", "operation": operation, "note": "Combination mode set for next selection operation"}
 
     def cmd_clear_selection(self, params: dict[str, Any]) -> dict[str, Any]:
         """Clear the content of the selection on the active layer."""

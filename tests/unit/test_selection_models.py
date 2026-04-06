@@ -7,13 +7,16 @@ from pydantic import ValidationError
 
 from krita_client.models import (
     ClearSelectionParams,
+    CombineSelectionParams,
     DeselectParams,
     FillSelectionParams,
     InvertSelectionParams,
+    ModifySelectionParams,
     SelectEllipseParams,
     SelectionInfoParams,
     SelectPolygonParams,
     SelectRectParams,
+    TransformSelectionParams,
 )
 
 
@@ -144,3 +147,70 @@ class TestDeselectParams:
         """Deselect params should accept empty construction."""
         params = DeselectParams()
         assert params is not None
+
+
+class TestTransformSelectionParams:
+    """Tests for selection transform model."""
+
+    def test_default_values(self) -> None:
+        """Transform params should have sensible defaults."""
+        params = TransformSelectionParams()
+        assert params.dx == 0
+        assert params.dy == 0
+        assert params.angle == 0.0
+        assert params.scale_x == 1.0
+        assert params.scale_y == 1.0
+
+    def test_custom_values(self) -> None:
+        """Custom transform params should create successfully."""
+        params = TransformSelectionParams(dx=10, dy=-5, angle=45.0, scale_x=2.0, scale_y=0.5)
+        assert params.dx == 10
+        assert params.scale_x == 2.0
+
+    def test_zero_scale_rejected(self) -> None:
+        """Zero or negative scale should be rejected."""
+        with pytest.raises(ValidationError):
+            TransformSelectionParams(scale_x=0.0)
+
+
+class TestModifySelectionParams:
+    """Tests for grow/shrink/border model."""
+
+    def test_valid_pixels(self) -> None:
+        """Valid pixel values should create successfully."""
+        params = ModifySelectionParams(pixels=5)
+        assert params.pixels == 5
+
+    def test_zero_pixels_rejected(self) -> None:
+        """Zero pixels should be rejected."""
+        with pytest.raises(ValidationError):
+            ModifySelectionParams(pixels=0)
+
+    def test_negative_pixels_rejected(self) -> None:
+        """Negative pixels should be rejected."""
+        with pytest.raises(ValidationError):
+            ModifySelectionParams(pixels=-1)
+
+
+class TestCombineSelectionParams:
+    """Tests for selection combination model."""
+
+    def test_union(self) -> None:
+        """Union operation should be valid."""
+        params = CombineSelectionParams(operation="union")
+        assert params.operation == "union"
+
+    def test_intersect(self) -> None:
+        """Intersect operation should be valid."""
+        params = CombineSelectionParams(operation="intersect")
+        assert params.operation == "intersect"
+
+    def test_subtract(self) -> None:
+        """Subtract operation should be valid."""
+        params = CombineSelectionParams(operation="subtract")
+        assert params.operation == "subtract"
+
+    def test_invalid_operation_rejected(self) -> None:
+        """Invalid operation should be rejected."""
+        with pytest.raises(ValidationError):
+            CombineSelectionParams(operation="invalid")
