@@ -70,7 +70,11 @@ def select_area_compat(
     width: int,
     height: int,
 ) -> None:
-    """Select a rectangular area (alias for select-rect)."""
+    """Select a rectangular area.
+
+    Deprecated: prefer `krita select-rect` instead. This alias will be
+    removed in a future release.
+    """
     select_rect(ctx, x, y, width, height)
 
 

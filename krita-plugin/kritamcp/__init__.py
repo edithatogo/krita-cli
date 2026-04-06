@@ -27,7 +27,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any
 
 from krita import *
-from PyQt5.QtCore import QThread, QTimer
+from PyQt5.QtCore import QThread, QTimer, QPolygon, QPoint
 from PyQt5.QtGui import QColor
 
 from kritamcp.history_store import CommandHistoryStore
@@ -634,17 +634,15 @@ class KritaMCPExtension(Extension):
         w = params.get("width", 100)
         h = params.get("height", 100)
 
-        # Basic bounds check (doc dims)
         if w < 1 or h < 1 or x < 0 or y < 0:
              return make_error("Invalid selection dimensions", code="INVALID_PARAMETERS", recoverable=True)
 
         selection = doc.selection()
         if not selection:
-             # If selection() is not available in Document, this will raise.
-             # In newer Krita API, you might need to create it.
              return make_error("Selection API not available in this Krita version", code="INTERNAL_ERROR", recoverable=False)
 
-        selection.select(x, y, w, h, 255) # 255 is opacity
+        selection.select(x, y, w, h, 255)
+        doc.refreshProjection()
         return {"status": "ok", "x": x, "y": y, "width": w, "height": h}
 
     def cmd_select_rect(self, params: dict[str, Any]) -> dict[str, Any]:
@@ -669,8 +667,12 @@ class KritaMCPExtension(Extension):
         if not selection:
             return make_error("Selection API not available in this Krita version", code="INTERNAL_ERROR", recoverable=False)
 
-        # Krita's Selection.selectEllipse takes center + radii
-        selection.selectEllipse(cx - rx, cy - ry, rx * 2, ry * 2, 255)
+        try:
+            selection.selectEllipse(cx - rx, cy - ry, rx * 2, ry * 2, 255)
+        except AttributeError:
+            # Fallback: use rectangular select for older Krita versions without selectEllipse
+            selection.select(cx - rx, cy - ry, rx * 2, ry * 2, 255)
+
         doc.refreshProjection()
         return {"status": "ok", "cx": cx, "cy": cy, "rx": rx, "ry": ry}
 
@@ -688,8 +690,6 @@ class KritaMCPExtension(Extension):
         if not selection:
             return make_error("Selection API not available in this Krita version", code="INTERNAL_ERROR", recoverable=False)
 
-        # Build QPolygon from points
-        from PyQt5.QtCore import QPolygon, QPoint
         polygon = QPolygon([QPoint(int(p[0]), int(p[1])) for p in points])
         selection.selectPolygon(polygon, 255)
         doc.refreshProjection()
@@ -705,44 +705,47 @@ class KritaMCPExtension(Extension):
         if not selection:
             return {"status": "ok", "has_selection": False, "bounds": None}
 
-        bounds = selection.bounds()  # Returns QRectF or similar
-        return {
-            "status": "ok",
-            "has_selection": True,
-            "bounds": {
-                "x": getattr(bounds, "x", lambda: 0)(),
-                "y": getattr(bounds, "y", lambda: 0)(),
-                "width": getattr(bounds, "width", lambda: 0)(),
-                "height": getattr(bounds, "height", lambda: 0)(),
-            },
-        }
+        try:
+            bounds = selection.bounds()
+            return {
+                "status": "ok",
+                "has_selection": True,
+                "bounds": {
+                    "x": bounds.x(),
+                    "y": bounds.y(),
+                    "width": bounds.width(),
+                    "height": bounds.height(),
+                },
+            }
+        except (AttributeError, TypeError):
+            return {"status": "ok", "has_selection": True, "bounds": None}
 
     def cmd_clear_selection(self, params: dict[str, Any]) -> dict[str, Any]:
         """Clear the content of the selection on the active layer."""
-        doc = self.get_active_document()
-        if not doc:
-            return make_error("No active document", code="NO_ACTIVE_DOCUMENT", recoverable=True)
-
-        selection = doc.selection()
-        if not selection:
-             return {"status": "ok", "message": "No active selection to clear"}
+        selection, error = self._get_selection_or_error()
+        if error:
+            return error
+        if selection is None:
+            return {"status": "ok", "message": "No active selection to clear"}
 
         selection.clear()
-        doc.refreshProjection()
+        doc = self.get_active_document()
+        if doc:
+            doc.refreshProjection()
         return {"status": "ok"}
 
     def cmd_invert_selection(self, params: dict[str, Any]) -> dict[str, Any]:
         """Invert the current selection."""
-        doc = self.get_active_document()
-        if not doc:
-            return make_error("No active document", code="NO_ACTIVE_DOCUMENT", recoverable=True)
-
-        selection = doc.selection()
-        if not selection:
-             return {"status": "ok", "message": "No active selection to invert"}
+        selection, error = self._get_selection_or_error()
+        if error:
+            return error
+        if selection is None:
+            return {"status": "ok", "message": "No active selection to invert"}
 
         selection.invert()
-        doc.refreshProjection()
+        doc = self.get_active_document()
+        if doc:
+            doc.refreshProjection()
         return {"status": "ok"}
 
     def cmd_fill_selection(self, params: dict[str, Any]) -> dict[str, Any]:
@@ -785,6 +788,21 @@ class KritaMCPExtension(Extension):
         if window:
             return window.activeView()
         return None
+
+    def _get_selection_or_error(self) -> tuple[Any | None, dict[str, Any] | None]:
+        """Get the active selection, returning an error dict if unavailable.
+
+        Returns:
+            Tuple of (selection, error). If error is not None, selection is None.
+            If selection is not None, error is None.
+        """
+        doc = self.get_active_document()
+        if not doc:
+            return None, make_error("No active document", code="NO_ACTIVE_DOCUMENT", recoverable=True)
+        selection = doc.selection()
+        if not selection:
+            return None, None  # No selection is not an error for info/clear/invert
+        return selection, None
 
     def get_active_layer(self) -> Any | None:
         doc = self.get_active_document()

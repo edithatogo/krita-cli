@@ -131,3 +131,75 @@ def test_krita_set_brush_error_in_result() -> None:
         mock_get.return_value = mock_client
         result = server_module.krita_set_brush(preset="nonexistent")
         assert "Error: preset not found" in result
+
+
+def test_krita_select_rect_error_in_result() -> None:
+    with patch("krita_mcp.server._get_client") as mock_get:
+        mock_client = MagicMock()
+        mock_client.select_rect.return_value = {"error": "invalid dimensions"}
+        mock_get.return_value = mock_client
+        result = server_module.krita_select_rect(x=0, y=0, width=0, height=0)
+        assert "Error: invalid dimensions" in result
+
+
+def test_krita_select_ellipse_error_in_result() -> None:
+    with patch("krita_mcp.server._get_client") as mock_get:
+        mock_client = MagicMock()
+        mock_client.select_ellipse.return_value = {"error": "no active document"}
+        mock_get.return_value = mock_client
+        result = server_module.krita_select_ellipse(cx=0, cy=0, rx=50, ry=50)
+        assert "Error: no active document" in result
+
+
+def test_krita_select_polygon_error_in_result() -> None:
+    with patch("krita_mcp.server._get_client") as mock_get:
+        mock_client = MagicMock()
+        mock_client.select_polygon.return_value = {"error": "need at least 3 points"}
+        mock_get.return_value = mock_client
+        result = server_module.krita_select_polygon(points=[[0, 0]])
+        assert "Error: need at least 3 points" in result
+
+
+def test_krita_selection_info_error_in_result() -> None:
+    with patch("krita_mcp.server._get_client") as mock_get:
+        mock_client = MagicMock()
+        mock_client.selection_info.return_value = {"error": "no active document"}
+        mock_get.return_value = mock_client
+        result = server_module.krita_selection_info()
+        assert "Error: no active document" in result
+
+
+def test_krita_clear_selection_error_in_result() -> None:
+    with patch("krita_mcp.server._get_client") as mock_get:
+        mock_client = MagicMock()
+        mock_client.clear_selection.return_value = {"error": "connection failed"}
+        mock_get.return_value = mock_client
+        result = server_module.krita_clear_selection()
+        assert "Error: connection failed" in result
+
+
+def test_krita_invert_selection_error_in_result() -> None:
+    with patch("krita_mcp.server._get_client") as mock_get:
+        mock_client = MagicMock()
+        mock_client.invert_selection.return_value = {"error": "no active document"}
+        mock_get.return_value = mock_client
+        result = server_module.krita_invert_selection()
+        assert "Error: no active document" in result
+
+
+def test_krita_fill_selection_error_in_result() -> None:
+    with patch("krita_mcp.server._get_client") as mock_get:
+        mock_client = MagicMock()
+        mock_client.fill_selection.return_value = {"error": "no active view"}
+        mock_get.return_value = mock_client
+        result = server_module.krita_fill_selection()
+        assert "Error: no active view" in result
+
+
+def test_krita_deselect_error_in_result() -> None:
+    with patch("krita_mcp.server._get_client") as mock_get:
+        mock_client = MagicMock()
+        mock_client.deselect.return_value = {"error": "connection failed"}
+        mock_get.return_value = mock_client
+        result = server_module.krita_deselect()
+        assert "Error: connection failed" in result
