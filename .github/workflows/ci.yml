@@ -101,6 +101,20 @@ jobs:
       - run: uv sync --frozen
       - run: uv run pytest tests/e2e/ -v -m e2e || echo "E2E tests skipped (no Krita available)"
 
+  test-e2e-mock:
+    name: E2E Tests (Mock Plugin)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: ${{ env.UV_VERSION }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: uv sync --frozen
+      - run: uv run pytest tests/e2e/test_e2e_mock.py -v
+
   mutation:
     name: Mutation Tests
     runs-on: ubuntu-latest
