@@ -20,6 +20,18 @@ This file tracks all major tracks for the project. Each track has its own detail
   *Link: [./tracks/selection_persistence_20260406/](./tracks/selection_persistence_20260406/)*
 - [ ] **Track: Security & Limits Validation**
   *Link: [./tracks/security_limits_validation_20260406/](./tracks/security_limits_validation_20260406/)*
+- [ ] **Track: E2E Test Infrastructure**
+  *Link: [./tracks/e2e_test_infrastructure_20260406/](./tracks/e2e_test_infrastructure_20260406/)*
+- [ ] **Track: CLI Command Grouping**
+  *Link: [./tracks/cli_command_grouping_20260406/](./tracks/cli_command_grouping_20260406/)*
+- [ ] **Track: MCP Tool Discovery**
+  *Link: [./tracks/mcp_tool_discovery_20260406/](./tracks/mcp_tool_discovery_20260406/)*
+- [ ] **Track: Protocol Versioning v2**
+  *Link: [./tracks/protocol_versioning_v2_20260406/](./tracks/protocol_versioning_v2_20260406/)*
+- [ ] **Track: Performance Benchmarking CI**
+  *Link: [./tracks/performance_benchmarking_ci_20260406/](./tracks/performance_benchmarking_ci_20260406/)*
+- [ ] **Track: Windows-Specific Testing**
+  *Link: [./tracks/windows_testing_20260406/](./tracks/windows_testing_20260406/)*
 
 **Archived:**
 - [x] ~~Rollback Mechanisms~~ → [archive/rollback_mechanisms_20260405/](./archive/rollback_mechanisms_20260405/)
