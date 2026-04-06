@@ -415,6 +415,10 @@ class KritaMCPExtension(Extension):
             "rename_layer": self.cmd_rename_layer,
             "set_layer_opacity": self.cmd_set_layer_opacity,
             "set_layer_visibility": self.cmd_set_layer_visibility,
+            "select_rect": self.cmd_select_rect,
+            "select_ellipse": self.cmd_select_ellipse,
+            "select_polygon": self.cmd_select_polygon,
+            "selection_info": self.cmd_selection_info,
             "select_area": self.cmd_select_area,
             "clear_selection": self.cmd_clear_selection,
             "fill_selection": self.cmd_fill_selection,
@@ -642,6 +646,76 @@ class KritaMCPExtension(Extension):
 
         selection.select(x, y, w, h, 255) # 255 is opacity
         return {"status": "ok", "x": x, "y": y, "width": w, "height": h}
+
+    def cmd_select_rect(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Select a rectangular area (alias for select_area with validated params)."""
+        return self.cmd_select_area(params)
+
+    def cmd_select_ellipse(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Select an elliptical area."""
+        doc = self.get_active_document()
+        if not doc:
+            return make_error("No active document", code="NO_ACTIVE_DOCUMENT", recoverable=True)
+
+        cx = params.get("cx", 0)
+        cy = params.get("cy", 0)
+        rx = params.get("rx", 50)
+        ry = params.get("ry", 50)
+
+        if rx < 1 or ry < 1:
+            return make_error("Invalid ellipse dimensions", code="INVALID_PARAMETERS", recoverable=True)
+
+        selection = doc.selection()
+        if not selection:
+            return make_error("Selection API not available in this Krita version", code="INTERNAL_ERROR", recoverable=False)
+
+        # Krita's Selection.selectEllipse takes center + radii
+        selection.selectEllipse(cx - rx, cy - ry, rx * 2, ry * 2, 255)
+        doc.refreshProjection()
+        return {"status": "ok", "cx": cx, "cy": cy, "rx": rx, "ry": ry}
+
+    def cmd_select_polygon(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Select a polygonal area."""
+        doc = self.get_active_document()
+        if not doc:
+            return make_error("No active document", code="NO_ACTIVE_DOCUMENT", recoverable=True)
+
+        points = params.get("points", [])
+        if len(points) < 3:
+            return make_error("Polygon requires at least 3 points", code="INVALID_PARAMETERS", recoverable=True)
+
+        selection = doc.selection()
+        if not selection:
+            return make_error("Selection API not available in this Krita version", code="INTERNAL_ERROR", recoverable=False)
+
+        # Build QPolygon from points
+        from PyQt5.QtCore import QPolygon, QPoint
+        polygon = QPolygon([QPoint(int(p[0]), int(p[1])) for p in points])
+        selection.selectPolygon(polygon, 255)
+        doc.refreshProjection()
+        return {"status": "ok", "points": points}
+
+    def cmd_selection_info(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Get information about the current selection."""
+        doc = self.get_active_document()
+        if not doc:
+            return make_error("No active document", code="NO_ACTIVE_DOCUMENT", recoverable=True)
+
+        selection = doc.selection()
+        if not selection:
+            return {"status": "ok", "has_selection": False, "bounds": None}
+
+        bounds = selection.bounds()  # Returns QRectF or similar
+        return {
+            "status": "ok",
+            "has_selection": True,
+            "bounds": {
+                "x": getattr(bounds, "x", lambda: 0)(),
+                "y": getattr(bounds, "y", lambda: 0)(),
+                "width": getattr(bounds, "width", lambda: 0)(),
+                "height": getattr(bounds, "height", lambda: 0)(),
+            },
+        }
 
     def cmd_clear_selection(self, params: dict[str, Any]) -> dict[str, Any]:
         """Clear the content of the selection on the active layer."""

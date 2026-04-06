@@ -239,13 +239,41 @@ class SetLayerVisibilityParams(BaseModel):
 # -- Selection operations -----------------------------------------------------
 
 
-class SelectAreaParams(BaseModel):
+class SelectRectParams(BaseModel):
     """Parameters for selecting a rectangular area."""
 
     x: int
     y: int
     width: Annotated[int, Field(ge=1, le=8192)]
     height: Annotated[int, Field(ge=1, le=8192)]
+
+
+class SelectEllipseParams(BaseModel):
+    """Parameters for selecting an elliptical area."""
+
+    cx: int
+    cy: int
+    rx: Annotated[int, Field(ge=1, le=8192)]
+    ry: Annotated[int, Field(ge=1, le=8192)]
+
+
+class SelectPolygonParams(BaseModel):
+    """Parameters for selecting a polygonal area."""
+
+    points: Annotated[list[list[int]], Field(min_length=3)]
+
+    @field_validator("points")
+    @classmethod
+    def validate_points(cls, value: list[list[int]]) -> list[list[int]]:
+        for i, pt in enumerate(value):
+            if len(pt) != 2:
+                msg = f"Point {i} must have exactly 2 coordinates, got {len(pt)}."
+                raise ValueError(msg)
+        return value
+
+
+class SelectionInfoParams(BaseModel):
+    """Parameters for querying current selection info (empty)."""
 
 
 class ClearSelectionParams(BaseModel):
@@ -364,8 +392,12 @@ COMMAND_MODELS: dict[str, type[BaseModel]] = {
     "get_canvas_info": CanvasInfoParams,
     "get_current_color": CurrentColorParams,
     "get_current_brush": CurrentBrushParams,
-    "select_area": SelectAreaParams,
+    "select_rect": SelectRectParams,
+    "select_ellipse": SelectEllipseParams,
+    "select_polygon": SelectPolygonParams,
+    "selection_info": SelectionInfoParams,
     "clear_selection": ClearSelectionParams,
+    "invert_selection": InvertSelectionParams,
     "fill_selection": FillSelectionParams,
     "deselect": DeselectParams,
     "get_command_history": GetCommandHistoryParams,

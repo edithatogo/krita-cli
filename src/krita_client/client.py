@@ -390,7 +390,7 @@ class KritaClient:
         """Get the current brush preset and properties."""
         return self._send("get_current_brush", {})
 
-    def select_area(
+    def select_rect(
         self,
         x: int,
         y: int,
@@ -399,17 +399,52 @@ class KritaClient:
         height: int,
     ) -> dict[str, object]:
         """Select a rectangular area on the canvas."""
-        from krita_client.models import SelectAreaParams
+        from krita_client.models import SelectRectParams
 
         validated = self._validate(
-            SelectAreaParams,
+            SelectRectParams,
             {"x": x, "y": y, "width": width, "height": height},
         )
-        return self._send("select_area", validated)
+        return self._send("select_rect", validated)
+
+    def select_ellipse(
+        self,
+        cx: int,
+        cy: int,
+        *,
+        rx: int,
+        ry: int,
+    ) -> dict[str, object]:
+        """Select an elliptical area on the canvas."""
+        from krita_client.models import SelectEllipseParams
+
+        validated = self._validate(
+            SelectEllipseParams,
+            {"cx": cx, "cy": cy, "rx": rx, "ry": ry},
+        )
+        return self._send("select_ellipse", validated)
+
+    def select_polygon(
+        self,
+        points: list[list[int]],
+    ) -> dict[str, object]:
+        """Select a polygonal area on the canvas."""
+        from krita_client.models import SelectPolygonParams
+
+        validated = self._validate(SelectPolygonParams, {"points": points})
+        return self._send("select_polygon", validated)
+
+    def selection_info(self) -> dict[str, object]:
+        """Get information about the current selection."""
+        return self._send("selection_info", {})
 
     def clear_selection(self) -> dict[str, object]:
-        """Clear the contents of the current selection."""
+        """Clear the current selection."""
         return self._send("clear_selection", {})
+
+    def invert_selection(self) -> dict[str, object]:
+        """Invert the current selection."""
+        return self._send("invert_selection", {})
 
     def fill_selection(self) -> dict[str, object]:
         """Fill the current selection with the foreground color."""
@@ -460,12 +495,6 @@ class KritaClient:
         """Toggle the visibility of a layer."""
         validated = self._validate(SetLayerVisibilityParams, {"name": name, "visible": visible})
         return self._send("set_layer_visibility", validated)
-
-    # -- Selection tools ------------------------------------------------------
-
-    def invert_selection(self) -> dict[str, object]:
-        """Invert the current selection."""
-        return self._send("invert_selection", {})
 
     # -- Generic command dispatch ---------------------------------------------
 
