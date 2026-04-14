@@ -64,6 +64,8 @@ Three layers:
 | `krita_shrink_selection` | Shrink selection by N pixels |
 | `krita_border_selection` | Create border selection |
 | `krita_combine_selections` | Union/intersect/subtract selections |
+| `krita_select_by_color` | Magic wand/global color selection |
+| `krita_select_by_alpha` | Select by transparency range |
 
 ## Completed (Phases 1-10)
 
