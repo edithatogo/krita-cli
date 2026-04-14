@@ -293,6 +293,67 @@ class DeselectParams(BaseModel):
     """Parameters for deselecting (empty)."""
 
 
+# -- Selection advanced features (color & alpha) ------------------------------
+
+
+class SelectByColorParams(BaseModel):
+    """Parameters for selecting by color (magic wand / global)."""
+
+    x: int | None = None
+    y: int | None = None
+    tolerance: Annotated[float, Field(ge=0.0, le=1.0)] = 0.1
+    contiguous: bool = True
+
+
+class SelectByAlphaParams(BaseModel):
+    """Parameters for selecting by alpha range."""
+
+    min_alpha: Annotated[int, Field(ge=0, le=255)] = 1
+    max_alpha: Annotated[int, Field(ge=0, le=255)] = 255
+
+
+# -- Selection persistence & session management --------------------------------
+
+
+class SaveSelectionParams(BaseModel):
+    """Parameters for saving selection to file."""
+
+    path: str
+    format: str = "png"
+
+    @field_validator("path")
+    @classmethod
+    def validate_path(cls, value: str) -> str:
+        if not value or not value.strip():
+            msg = "Path cannot be empty."
+            raise ValueError(msg)
+        return value.strip()
+
+
+class LoadSelectionParams(BaseModel):
+    """Parameters for loading selection from file."""
+
+    path: str
+
+    @field_validator("path")
+    @classmethod
+    def validate_path(cls, value: str) -> str:
+        if not value or not value.strip():
+            msg = "Path cannot be empty."
+            raise ValueError(msg)
+        return value.strip()
+
+
+class SelectionChannelParams(BaseModel):
+    """Parameters for selection channel operations."""
+
+    name: str
+
+
+class SelectionStatsParams(BaseModel):
+    """Parameters for getting selection statistics (empty)."""
+
+
 # -- Selection transforms & modifiers -----------------------------------------
 
 
@@ -433,5 +494,14 @@ COMMAND_MODELS: dict[str, type[BaseModel]] = {
     "invert_selection": InvertSelectionParams,
     "fill_selection": FillSelectionParams,
     "deselect": DeselectParams,
+    "select_by_color": SelectByColorParams,
+    "select_by_alpha": SelectByAlphaParams,
+    "save_selection": SaveSelectionParams,
+    "load_selection": LoadSelectionParams,
+    "selection_stats": SelectionStatsParams,
+    "save_selection_channel": SelectionChannelParams,
+    "load_selection_channel": SelectionChannelParams,
+    "list_selection_channels": SelectionStatsParams,
+    "delete_selection_channel": SelectionChannelParams,
     "get_command_history": GetCommandHistoryParams,
 }

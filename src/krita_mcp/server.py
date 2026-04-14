@@ -857,6 +857,50 @@ def krita_selection_stats() -> str:
 
 
 @mcp.tool()
+def krita_save_selection_channel(name: str) -> str:
+    """Save the current selection as a named channel within the document."""
+    try:
+        client = _get_client()
+        result = client.save_selection_channel(name=name)
+        if "error" in result:
+            return f"Error: {result['error']}"
+        return f"Saved selection channel '{name}'"
+    except KritaError as exc:
+        return _format_error(exc)
+
+
+@mcp.tool()
+def krita_load_selection_channel(name: str) -> str:
+    """Load a named selection channel and restore it as the active selection."""
+    try:
+        client = _get_client()
+        result = client.load_selection_channel(name=name)
+        if "error" in result:
+            return f"Error: {result['error']}"
+        return f"Loaded selection channel '{name}'"
+    except KritaError as exc:
+        return _format_error(exc)
+
+
+@mcp.tool()
+def krita_list_selection_channels() -> str:
+    """List all saved selection channels in the current document."""
+    try:
+        client = _get_client()
+        result = client.list_selection_channels()
+        if "error" in result:
+            return f"Error: {result['error']}"
+        channels = result.get("channels", [])
+        count = result.get("count", 0)
+        if count == 0:
+            return "No saved selection channels"
+        names = [ch.get("name", "?") for ch in channels]
+        return f"Selection channels ({count}): {', '.join(names)}"
+    except KritaError as exc:
+        return _format_error(exc)
+
+
+@mcp.tool()
 def krita_security_status() -> str:
     """Get current security limits and usage from the Krita plugin."""
     try:
@@ -912,6 +956,9 @@ def krita_list_tools() -> str:
         ("krita_save_selection", "Save selection as PNG mask"),
         ("krita_load_selection", "Load selection from PNG mask"),
         ("krita_selection_stats", "Get selection statistics"),
+        ("krita_save_selection_channel", "Save selection as named channel"),
+        ("krita_load_selection_channel", "Load named selection channel"),
+        ("krita_list_selection_channels", "List saved selection channels"),
         ("krita_select_by_color", "Select by color (magic wand/global)"),
         ("krita_select_by_alpha", "Select by alpha range"),
         ("krita_get_capabilities", "Get detected API capabilities"),

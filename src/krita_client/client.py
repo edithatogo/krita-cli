@@ -511,6 +511,124 @@ class KritaClient:
         """Remove the current selection."""
         return self._send("deselect", {})
 
+    def select_by_color(
+        self,
+        *,
+        x: int | None = None,
+        y: int | None = None,
+        tolerance: float = 0.1,
+        contiguous: bool = True,
+    ) -> dict[str, object]:
+        """Select pixels by color similarity.
+
+        Args:
+            x: X coordinate for point-based selection (magic wand). None for global.
+            y: Y coordinate for point-based selection (magic wand). None for global.
+            tolerance: Color tolerance (0.0-1.0).
+            contiguous: If True, only select contiguous region (magic wand).
+                       If False, select all matching pixels globally.
+        """
+        from krita_client.models import SelectByColorParams
+
+        params: dict[str, object] = {"tolerance": tolerance, "contiguous": contiguous}
+        if x is not None and y is not None:
+            params["x"] = x
+            params["y"] = y
+        validated = self._validate(SelectByColorParams, params)
+        return self._send("select_by_color", validated)
+
+    def select_by_alpha(
+        self,
+        *,
+        min_alpha: int = 1,
+        max_alpha: int = 255,
+    ) -> dict[str, object]:
+        """Select pixels by alpha value range.
+
+        Args:
+            min_alpha: Minimum alpha value (0-255).
+            max_alpha: Maximum alpha value (0-255).
+        """
+        from krita_client.models import SelectByAlphaParams
+
+        validated = self._validate(SelectByAlphaParams, {"min_alpha": min_alpha, "max_alpha": max_alpha})
+        return self._send("select_by_alpha", validated)
+
+    def save_selection(
+        self,
+        path: str,
+        *,
+        format: str = "png",
+    ) -> dict[str, object]:
+        """Save current selection to a file as a mask.
+
+        Args:
+            path: File path to save selection mask.
+            format: Image format (default: png).
+        """
+        from krita_client.models import SaveSelectionParams
+
+        validated = self._validate(SaveSelectionParams, {"path": path, "format": format})
+        return self._send("save_selection", validated)
+
+    def load_selection(
+        self,
+        path: str,
+    ) -> dict[str, object]:
+        """Load selection from a mask file.
+
+        Args:
+            path: File path to load selection mask from.
+        """
+        from krita_client.models import LoadSelectionParams
+
+        validated = self._validate(LoadSelectionParams, {"path": path})
+        return self._send("load_selection", validated)
+
+    def selection_stats(self) -> dict[str, object]:
+        """Get statistics about the current selection.
+
+        Returns pixel count, centroid, area percentage, etc.
+        """
+        return self._send("selection_stats", {})
+
+    def save_selection_channel(self, *, name: str) -> dict[str, object]:
+        """Save current selection as a named channel.
+
+        Args:
+            name: Name for the selection channel.
+        """
+        from krita_client.models import SelectionChannelParams
+
+        validated = self._validate(SelectionChannelParams, {"name": name})
+        return self._send("save_selection_channel", validated)
+
+    def load_selection_channel(self, *, name: str) -> dict[str, object]:
+        """Load a named selection channel.
+
+        Args:
+            name: Name of the selection channel to load.
+        """
+        from krita_client.models import SelectionChannelParams
+
+        validated = self._validate(SelectionChannelParams, {"name": name})
+        return self._send("load_selection_channel", validated)
+
+    def list_selection_channels(self) -> dict[str, object]:
+        """List all saved selection channels."""
+        return self._send("list_selection_channels", {})
+
+    def delete_selection_channel(self, *, name: str) -> dict[str, object]:
+        """Delete a saved selection channel.
+
+        Args:
+            name: Name of the selection channel to delete.
+        """
+        from krita_client.models import SelectionChannelParams
+
+        validated = self._validate(SelectionChannelParams, {"name": name})
+        return self._send("delete_selection_channel", validated)
+
     # -- Layer management -----------------------------------------------------
 
     def list_layers(self) -> dict[str, object]:

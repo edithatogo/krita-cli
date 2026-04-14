@@ -260,6 +260,58 @@ def selection_stats(ctx: Context) -> None:
             console.print(f"  Area: {area_pct:.1f}% of canvas")
 
 
+@app.command("save-channel")
+def save_channel(
+    ctx: Context,
+    name: Annotated[str, typer.Argument(help="Name for the selection channel")],
+) -> None:
+    """Save current selection as a named channel."""
+    client = _shared._get_client(ctx)
+    with _shared._handle_errors():
+        result = client.save_selection_channel(name=name)
+        _shared._print_result(result, f"Saved selection channel '{name}'")
+
+
+@app.command("load-channel")
+def load_channel(
+    ctx: Context,
+    name: Annotated[str, typer.Argument(help="Name of the selection channel to load")],
+) -> None:
+    """Load a named selection channel."""
+    client = _shared._get_client(ctx)
+    with _shared._handle_errors():
+        result = client.load_selection_channel(name=name)
+        _shared._print_result(result, f"Loaded selection channel '{name}'")
+
+
+@app.command("list-channels")
+def list_channels(ctx: Context) -> None:
+    """List all saved selection channels."""
+    client = _shared._get_client(ctx)
+    with _shared._handle_errors():
+        result = client.list_selection_channels()
+        channels = result.get("channels", [])
+        count = result.get("count", 0)
+        if count == 0:
+            console.print("[dim]No saved selection channels[/dim]")
+        else:
+            console.print(f"[green]Selection Channels ({count}):[/green]")
+            for ch in channels:
+                console.print(f"  - [bold]{ch['name']}[/bold]")
+
+
+@app.command("delete-channel")
+def delete_channel(
+    ctx: Context,
+    name: Annotated[str, typer.Argument(help="Name of the selection channel to delete")],
+) -> None:
+    """Delete a saved selection channel."""
+    client = _shared._get_client(ctx)
+    with _shared._handle_errors():
+        result = client.delete_selection_channel(name=name)
+        _shared._print_result(result, f"Deleted selection channel '{name}'")
+
+
 @app.command("security-status")
 def security_status(ctx: Context) -> None:
     """Show current security limits and usage."""

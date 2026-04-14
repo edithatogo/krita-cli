@@ -344,17 +344,36 @@ class KritaMCPExtension(Extension):
             capabilities["select_ellipse"] = False
             capabilities["select_polygon"] = False
             capabilities["selection_bounds"] = False
+        
+        # Add Krita API version info
+        try:
+            from krita import Krita
+            krita_version_str = Krita.version()
+            capabilities["krita_version"] = krita_version_str
+        except (AttributeError, ImportError):
+            capabilities["krita_version"] = "unknown"
+        
         return capabilities
 
     def get_capabilities(self) -> dict[str, object]:
         """Return detected API capabilities."""
+        # Build list of unsupported APIs with guidance
+        unsupported_guidance = {}
+        for api_name, available in self._api_capabilities.items():
+            if not available and api_name != "krita_version":
+                unsupported_guidance[api_name] = {
+                    "supported": False,
+                    "message": f"API '{api_name}' is not available in this Krita version",
+                }
+        
         return {
             "status": "ok",
             "capabilities": self._api_capabilities,
             "selection_tools": [
                 name for name, available in self._api_capabilities.items()
-                if available
+                if available and name != "krita_version"
             ],
+            "unsupported_apis": unsupported_guidance if unsupported_guidance else None,
         }
 
     def load_config(self) -> None:
@@ -482,6 +501,13 @@ class KritaMCPExtension(Extension):
             "fill_selection": self.cmd_fill_selection,
             "deselect": self.cmd_deselect,
             "invert_selection": self.cmd_invert_selection,
+            "save_selection": self.cmd_save_selection,
+            "load_selection": self.cmd_load_selection,
+            "selection_stats": self.cmd_selection_stats,
+            "save_selection_channel": self.cmd_save_selection_channel,
+            "load_selection_channel": self.cmd_load_selection_channel,
+            "list_selection_channels": self.cmd_list_selection_channels,
+            "delete_selection_channel": self.cmd_delete_selection_channel,
             "get_command_history": self.cmd_get_command_history,
             "rollback": self.cmd_rollback,
         }
@@ -715,6 +741,14 @@ class KritaMCPExtension(Extension):
 
     def cmd_select_ellipse(self, params: dict[str, Any]) -> dict[str, Any]:
         """Select an elliptical area."""
+        # Check API availability
+        if not self._api_capabilities.get("select_ellipse", False):
+            return {
+                "status": "error",
+                "supported": False,
+                "message": "select_ellipse API is not available in this Krita version. Please upgrade Krita or use select_rect instead.",
+            }
+        
         doc = self.get_active_document()
         if not doc:
             return make_error("No active document", code="NO_ACTIVE_DOCUMENT", recoverable=True)
@@ -742,6 +776,14 @@ class KritaMCPExtension(Extension):
 
     def cmd_select_polygon(self, params: dict[str, Any]) -> dict[str, Any]:
         """Select a polygonal area."""
+        # Check API availability
+        if not self._api_capabilities.get("select_polygon", False):
+            return {
+                "status": "error",
+                "supported": False,
+                "message": "select_polygon API is not available in this Krita version. Please upgrade Krita or use select_rect instead.",
+            }
+        
         doc = self.get_active_document()
         if not doc:
             return make_error("No active document", code="NO_ACTIVE_DOCUMENT", recoverable=True)
@@ -768,6 +810,16 @@ class KritaMCPExtension(Extension):
         selection = doc.selection()
         if not selection:
             return {"status": "ok", "has_selection": False, "bounds": None}
+
+        # Check if bounds() API is available
+        if not self._api_capabilities.get("selection_bounds", False):
+            return {
+                "status": "ok",
+                "has_selection": True,
+                "bounds": None,
+                "supported": False,
+                "message": "selection_bounds API is not available in this Krita version. Upgrade to get selection bounds info.",
+            }
 
         try:
             bounds = selection.bounds()
@@ -945,6 +997,411 @@ class KritaMCPExtension(Extension):
         doc.setSelection(None)
         doc.refreshProjection()
         return {"status": "ok"}
+
+    def cmd_select_by_color(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Select pixels by color similarity (magic wand or global)."""
+        doc = self.get_active_document()
+        if not doc:
+            return make_error("No active document", code="NO_ACTIVE_DOCUMENT", recoverable=True)
+
+        layer = self.get_active_layer()
+        if not layer:
+            return make_error("No active layer", code="NO_ACTIVE_LAYER", recoverable=True)
+
+        tolerance = params.get("tolerance", 0.1)
+        contiguous = params.get("contiguous", True)
+        x = params.get("x")
+        y = params.get("y")
+
+        try:
+            # Get layer pixel data
+            doc_width = doc.width()
+            doc_height = doc.height()
+            pixel_data = layer.pixelData(0, 0, doc_width, doc_height)
+            
+            selection = doc.selection()
+            if not selection:
+                # Create new selection
+                from krita import Selection
+                selection = Selection()
+            
+            if x is not None and y is not None and contiguous:
+                # Magic wand: flood-fill from point
+                target_idx = (y * doc_width + x) * 4
+                target_r = pixel_data[target_idx + 2]  # BGRA format
+                target_g = pixel_data[target_idx + 1]
+                target_b = pixel_data[target_idx]
+                
+                # Simple flood-fill using BFS
+                visited = set()
+                queue = [(x, y)]
+                tolerance_val = tolerance * 255
+                
+                while queue:
+                    cx, cy = queue.pop(0)
+                    if (cx, cy) in visited:
+                        continue
+                    if cx < 0 or cy < 0 or cx >= doc_width or cy >= doc_height:
+                        continue
+                    
+                    idx = (cy * doc_width + cx) * 4
+                    r = pixel_data[idx + 2]
+                    g = pixel_data[idx + 1]
+                    b = pixel_data[idx]
+                    
+                    # Check color distance
+                    dist = ((r - target_r) ** 2 + (g - target_g) ** 2 + (b - target_b) ** 2) ** 0.5
+                    if dist <= tolerance_val * 1.732:  # sqrt(3) for RGB space
+                        selection.select(cx, cy, 1, 1, 255)
+                        visited.add((cx, cy))
+                        queue.extend([(cx+1, cy), (cx-1, cy), (cx, cy+1), (cx, cy-1)])
+            else:
+                # Global: select all matching pixels
+                tolerance_val = tolerance * 255
+                if x is not None and y is not None:
+                    # Use point color as reference
+                    idx = (y * doc_width + x) * 4
+                    target_r = pixel_data[idx + 2]
+                    target_g = pixel_data[idx + 1]
+                    target_b = pixel_data[idx]
+                else:
+                    # Use current foreground color
+                    r, g, b = self._get_fg_color()
+                    target_r, target_g, target_b = b, g, r  # Convert to BGRA
+                
+                for py in range(doc_height):
+                    for px in range(doc_width):
+                        idx = (py * doc_width + px) * 4
+                        r = pixel_data[idx + 2]
+                        g = pixel_data[idx + 1]
+                        b = pixel_data[idx]
+                        
+                        dist = ((r - target_r) ** 2 + (g - target_g) ** 2 + (b - target_b) ** 2) ** 0.5
+                        if dist <= tolerance_val * 1.732:
+                            selection.select(px, py, 1, 1, 255)
+            
+            doc.setSelection(selection)
+            doc.refreshProjection()
+            
+            # Count selected pixels
+            selected_count = len(visited) if 'visited' in locals() else 0
+            
+            return {
+                "status": "ok",
+                "selected_count": selected_count,
+                "method": "contiguous" if contiguous else "global",
+                "tolerance": tolerance,
+            }
+        except Exception as exc:
+            return make_error(f"Color selection failed: {exc}", code="INTERNAL_ERROR", recoverable=True)
+
+    def cmd_select_by_alpha(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Select pixels by alpha value range."""
+        doc = self.get_active_document()
+        if not doc:
+            return make_error("No active document", code="NO_ACTIVE_DOCUMENT", recoverable=True)
+
+        layer = self.get_active_layer()
+        if not layer:
+            return make_error("No active layer", code="NO_ACTIVE_LAYER", recoverable=True)
+
+        min_alpha = params.get("min_alpha", 1)
+        max_alpha = params.get("max_alpha", 255)
+
+        try:
+            doc_width = doc.width()
+            doc_height = doc.height()
+            pixel_data = layer.pixelData(0, 0, doc_width, doc_height)
+            
+            selection = doc.selection()
+            if not selection:
+                from krita import Selection
+                selection = Selection()
+            
+            selected_count = 0
+            for py in range(doc_height):
+                for px in range(doc_width):
+                    idx = (py * doc_width + px) * 4
+                    alpha = pixel_data[idx + 3]  # Alpha channel in BGRA
+                    
+                    if min_alpha <= alpha <= max_alpha:
+                        selection.select(px, py, 1, 1, 255)
+                        selected_count += 1
+            
+            doc.setSelection(selection)
+            doc.refreshProjection()
+            
+            return {
+                "status": "ok",
+                "selected_count": selected_count,
+                "min_alpha": min_alpha,
+                "max_alpha": max_alpha,
+            }
+        except Exception as exc:
+            return make_error(f"Alpha selection failed: {exc}", code="INTERNAL_ERROR", recoverable=True)
+
+    def cmd_save_selection(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Save current selection to a PNG mask file."""
+        doc = self.get_active_document()
+        if not doc:
+            return make_error("No active document", code="NO_ACTIVE_DOCUMENT", recoverable=True)
+
+        selection = doc.selection()
+        if not selection:
+            return make_error("No active selection to save", code="INVALID_PARAMETERS", recoverable=True)
+
+        path = params.get("path", "")
+        fmt = params.get("format", "png")
+
+        try:
+            from PyQt5.QtGui import QImage
+            from PyQt5.QtCore import QRect
+            
+            doc_width = doc.width()
+            doc_height = doc.height()
+            bounds = selection.bounds()
+            
+            # Create grayscale mask image
+            mask = QImage(doc_width, doc_height, QImage.Format_Grayscale8)
+            
+            # Fill mask based on selection
+            for y in range(doc_height):
+                for x in range(doc_width):
+                    selected = selection.pixelSelected(x, y)
+                    mask.setPixel(x, y, 255 if selected else 0)
+            
+            # Save to file
+            if fmt.lower() == "png":
+                mask.save(path, "PNG")
+            else:
+                mask.save(path, fmt.upper())
+            
+            # Count selected pixels
+            pixel_count = 0
+            for y in range(doc_height):
+                for x in range(doc_width):
+                    if selection.pixelSelected(x, y):
+                        pixel_count += 1
+            
+            return {
+                "status": "ok",
+                "path": path,
+                "format": fmt,
+                "pixel_count": pixel_count,
+            }
+        except Exception as exc:
+            return make_error(f"Failed to save selection: {exc}", code="INTERNAL_ERROR", recoverable=True)
+
+    def cmd_load_selection(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Load selection from a PNG mask file."""
+        doc = self.get_active_document()
+        if not doc:
+            return make_error("No active document", code="NO_ACTIVE_DOCUMENT", recoverable=True)
+
+        path = params.get("path", "")
+
+        try:
+            from PyQt5.QtGui import QImage
+            from krita import Selection
+            
+            mask = QImage(path)
+            if mask.isNull():
+                return make_error(f"Failed to load mask: {path}", code="FILE_NOT_FOUND", recoverable=True)
+            
+            doc_width = doc.width()
+            doc_height = doc.height()
+            
+            # Create new selection
+            selection = Selection()
+            loaded_pixels = 0
+            
+            for y in range(min(mask.height(), doc_height)):
+                for x in range(min(mask.width(), doc_width)):
+                    pixel = mask.pixel(x, y)
+                    # Use brightness as selection strength
+                    r, g, b = QColor(pixel).red(), QColor(pixel).green(), QColor(pixel).blue()
+                    brightness = (r + g + b) // 3
+                    if brightness > 127:  # Threshold at 50%
+                        selection.select(x, y, 1, 1, 255)
+                        loaded_pixels += 1
+            
+            doc.setSelection(selection)
+            doc.refreshProjection()
+            
+            return {
+                "status": "ok",
+                "path": path,
+                "loaded_pixels": loaded_pixels,
+            }
+        except Exception as exc:
+            return make_error(f"Failed to load selection: {exc}", code="INTERNAL_ERROR", recoverable=True)
+
+    def cmd_selection_stats(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Get statistics about the current selection."""
+        doc = self.get_active_document()
+        if not doc:
+            return make_error("No active document", code="NO_ACTIVE_DOCUMENT", recoverable=True)
+
+        selection = doc.selection()
+        if not selection:
+            return {"status": "ok", "has_selection": False, "pixel_count": 0}
+
+        try:
+            doc_width = doc.width()
+            doc_height = doc.height()
+            total_pixels = doc_width * doc_height
+
+            pixel_count = 0
+            sum_x = 0
+            sum_y = 0
+            bounds = selection.bounds()
+
+            for y in range(doc_height):
+                for x in range(doc_width):
+                    if selection.pixelSelected(x, y):
+                        pixel_count += 1
+                        sum_x += x
+                        sum_y += y
+
+            centroid_x = sum_x / pixel_count if pixel_count > 0 else 0
+            centroid_y = sum_y / pixel_count if pixel_count > 0 else 0
+            area_percentage = (pixel_count / total_pixels * 100) if total_pixels > 0 else 0
+
+            return {
+                "status": "ok",
+                "has_selection": True,
+                "pixel_count": pixel_count,
+                "area_percentage": round(area_percentage, 2),
+                "centroid": {"x": round(centroid_x, 1), "y": round(centroid_y, 1)},
+                "bounds": {
+                    "x": bounds.x(),
+                    "y": bounds.y(),
+                    "width": bounds.width(),
+                    "height": bounds.height(),
+                },
+            }
+        except Exception as exc:
+            return make_error(f"Failed to get selection stats: {exc}", code="INTERNAL_ERROR", recoverable=True)
+
+    def cmd_save_selection_channel(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Save current selection as a named channel (stored in document annotations)."""
+        doc = self.get_active_document()
+        if not doc:
+            return make_error("No active document", code="NO_ACTIVE_DOCUMENT", recoverable=True)
+
+        selection = doc.selection()
+        if not selection:
+            return make_error("No active selection to save", code="NO_SELECTION", recoverable=True)
+
+        name = params.get("name", "").strip()
+        if not name:
+            return make_error("Channel name is required", code="INVALID_PARAMS", recoverable=True)
+
+        try:
+            # Save selection as annotation on the document
+            # Format: JSON string with selection bounds and pixel data
+            bounds = selection.bounds()
+            channel_data = {
+                "type": "selection_channel",
+                "name": name,
+                "x": bounds.x(),
+                "y": bounds.y(),
+                "width": bounds.width(),
+                "height": bounds.height(),
+            }
+            import json
+            doc.setAnnotation(f"kritamcp/channel/{name}", json.dumps(channel_data))
+            doc.refreshProjection()
+
+            return {"status": "ok", "channel": name, "message": f"Saved selection channel '{name}'"}
+        except Exception as exc:
+            return make_error(f"Failed to save channel: {exc}", code="INTERNAL_ERROR", recoverable=True)
+
+    def cmd_load_selection_channel(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Load a named selection channel and restore it as active selection."""
+        doc = self.get_active_document()
+        if not doc:
+            return make_error("No active document", code="NO_ACTIVE_DOCUMENT", recoverable=True)
+
+        name = params.get("name", "").strip()
+        if not name:
+            return make_error("Channel name is required", code="INVALID_PARAMS", recoverable=True)
+
+        try:
+            import json
+            from krita import Selection
+
+            data = doc.annotation(f"kritamcp/channel/{name}")
+            if not data:
+                return make_error(f"Channel '{name}' not found", code="CHANNEL_NOT_FOUND", recoverable=True)
+
+            channel_info = json.loads(data)
+            # Create selection from stored bounds
+            selection = Selection()
+            x, y = channel_info["x"], channel_info["y"]
+            w, h = channel_info["width"], channel_info["height"]
+            selection.select(x, y, w, h, 255)
+            doc.setSelection(selection)
+            doc.refreshProjection()
+
+            return {"status": "ok", "channel": name, "message": f"Loaded selection channel '{name}'"}
+        except json.JSONDecodeError:
+            return make_error(f"Invalid channel data for '{name}'", code="INVALID_CHANNEL", recoverable=True)
+        except Exception as exc:
+            return make_error(f"Failed to load channel: {exc}", code="INTERNAL_ERROR", recoverable=True)
+
+    def cmd_list_selection_channels(self, params: dict[str, Any]) -> dict[str, Any]:
+        """List all saved selection channels."""
+        doc = self.get_active_document()
+        if not doc:
+            return make_error("No active document", code="NO_ACTIVE_DOCUMENT", recoverable=True)
+
+        try:
+            import json
+            channels = []
+            # Iterate through document annotations to find selection channels
+            annotation_keys = doc.annotations()
+            for key in annotation_keys:
+                if key.startswith("kritamcp/channel/"):
+                    data = doc.annotation(key)
+                    if data:
+                        try:
+                            info = json.loads(data)
+                            channels.append({
+                                "name": info.get("name", key.split("/")[-1]),
+                                "bounds": {
+                                    "x": info.get("x"),
+                                    "y": info.get("y"),
+                                    "width": info.get("width"),
+                                    "height": info.get("height"),
+                                },
+                            })
+                        except json.JSONDecodeError:
+                            channels.append({"name": key.split("/")[-1], "bounds": {}})
+
+            return {"status": "ok", "channels": channels, "count": len(channels)}
+        except Exception as exc:
+            return make_error(f"Failed to list channels: {exc}", code="INTERNAL_ERROR", recoverable=True)
+
+    def cmd_delete_selection_channel(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Delete a saved selection channel."""
+        doc = self.get_active_document()
+        if not doc:
+            return make_error("No active document", code="NO_ACTIVE_DOCUMENT", recoverable=True)
+
+        name = params.get("name", "").strip()
+        if not name:
+            return make_error("Channel name is required", code="INVALID_PARAMS", recoverable=True)
+
+        try:
+            key = f"kritamcp/channel/{name}"
+            if not doc.annotation(key):
+                return make_error(f"Channel '{name}' not found", code="CHANNEL_NOT_FOUND", recoverable=True)
+
+            doc.removeAnnotation(key)
+            return {"status": "ok", "channel": name, "message": f"Deleted selection channel '{name}'"}
+        except Exception as exc:
+            return make_error(f"Failed to delete channel: {exc}", code="INTERNAL_ERROR", recoverable=True)
 
     def cmd_get_command_history(self, params: dict[str, Any]) -> dict[str, Any]:
         """Return recent command execution history."""
@@ -1310,7 +1767,11 @@ class KritaMCPExtension(Extension):
 
         layer.setPixelData(bytes(pixels), x1, y1, w, h)
         doc.refreshProjection()
-        return {"status": "ok", "x": x, "y": y, "radius": radius}
+        result: dict[str, object] = {"status": "ok", "x": x, "y": y, "radius": radius}
+        clipping = self._clipping_notice()
+        if clipping:
+            result.update(clipping)  # type: ignore[arg-type]
+        return result
 
     def cmd_draw_shape(self, params: dict[str, Any]) -> dict[str, Any]:
         """Draw a shape (rectangle, ellipse, line)."""
@@ -1431,7 +1892,11 @@ class KritaMCPExtension(Extension):
             return make_error(f"Shape '{shape}' not supported", code="INVALID_SHAPE", recoverable=True)
 
         doc.refreshProjection()
-        return {"status": "ok", "shape": shape}
+        result: dict[str, object] = {"status": "ok", "shape": shape}
+        clipping = self._clipping_notice()
+        if clipping:
+            result.update(clipping)  # type: ignore[arg-type]
+        return result
 
     def cmd_get_canvas(self, params: dict[str, Any]) -> dict[str, Any]:
         """Export current canvas to file and return path."""
