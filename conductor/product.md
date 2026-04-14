@@ -59,6 +59,11 @@ Three layers:
 | `krita_clear_selection` | Clear selection contents |
 | `krita_fill_selection` | Fill selection with foreground color |
 | `krita_deselect` | Remove current selection |
+| `krita_transform_selection` | Move/rotate/scale selection boundary |
+| `krita_grow_selection` | Grow selection by N pixels |
+| `krita_shrink_selection` | Shrink selection by N pixels |
+| `krita_border_selection` | Create border selection |
+| `krita_combine_selections` | Union/intersect/subtract selections |
 
 ## Completed (Phases 1-10)
 
