@@ -66,6 +66,12 @@ Three layers:
 | `krita_combine_selections` | Union/intersect/subtract selections |
 | `krita_select_by_color` | Magic wand/global color selection |
 | `krita_select_by_alpha` | Select by transparency range |
+| `krita_save_selection` | Save selection as PNG mask |
+| `krita_load_selection` | Load selection from PNG mask |
+| `krita_selection_stats` | Get selection statistics |
+| `krita_save_selection_channel` | Save selection as named channel |
+| `krita_load_selection_channel` | Load named selection channel |
+| `krita_list_selection_channels` | List saved selection channels |
 
 ## Completed (Phases 1-10)
 
