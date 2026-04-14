@@ -8,7 +8,7 @@ This file tracks all major tracks for the project. Each track has its own detail
   *Link: [./tracks/implement_batch_operations_endpoint_20260405/](./tracks/implement_batch_operations_endpoint_20260405/)*
 - [x] **Track: Selection Tools**
   *Link: [./tracks/selection_tools_20260406/](./tracks/selection_tools_20260406/)*
-- [ ] **Track: Selection Persistence & Session Management**
+- [x] **Track: Selection Persistence & Session Management**
   *Link: [./tracks/selection_persistence_20260406/](./tracks/selection_persistence_20260406/)*
 - [ ] **Track: Security & Limits Validation**
   *Link: [./tracks/security_limits_validation_20260406/](./tracks/security_limits_validation_20260406/)*
