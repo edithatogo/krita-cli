@@ -8,8 +8,6 @@ This file tracks all major tracks for the project. Each track has its own detail
   *Link: [./tracks/implement_batch_operations_endpoint_20260405/](./tracks/implement_batch_operations_endpoint_20260405/)*
 - [x] **Track: Selection Tools**
   *Link: [./tracks/selection_tools_20260406/](./tracks/selection_tools_20260406/)*
-- [x] **Track: Selection Code Quality & Test Coverage**
-  *Link: [./tracks/selection_quality_coverage_20260406/](./tracks/selection_quality_coverage_20260406/)*
 - [ ] **Track: Selection Transforms & Modifiers**
   *Link: [./tracks/selection_transforms_modifiers_20260406/](./tracks/selection_transforms_modifiers_20260406/)*
 - [ ] **Track: Selection Advanced Features (Color & Alpha)**
