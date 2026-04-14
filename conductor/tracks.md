@@ -8,8 +8,6 @@ This file tracks all major tracks for the project. Each track has its own detail
   *Link: [./tracks/implement_batch_operations_endpoint_20260405/](./tracks/implement_batch_operations_endpoint_20260405/)*
 - [x] **Track: Selection Tools**
   *Link: [./tracks/selection_tools_20260406/](./tracks/selection_tools_20260406/)*
-- [x] **Track: CLI Command Grouping**
-  *Link: [./tracks/cli_command_grouping_20260406/](./tracks/cli_command_grouping_20260406/)*
 - [ ] **Track: MCP Tool Discovery**
   *Link: [./tracks/mcp_tool_discovery_20260406/](./tracks/mcp_tool_discovery_20260406/)*
 - [ ] **Track: Protocol Versioning v2**
