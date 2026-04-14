@@ -8,7 +8,7 @@ This file tracks all major tracks for the project. Each track has its own detail
   *Link: [./tracks/implement_batch_operations_endpoint_20260405/](./tracks/implement_batch_operations_endpoint_20260405/)*
 - [x] **Track: Selection Tools**
   *Link: [./tracks/selection_tools_20260406/](./tracks/selection_tools_20260406/)*
-- [ ] **Track: Selection Advanced Features (Color & Alpha)**
+- [x] **Track: Selection Advanced Features (Color & Alpha)**
   *Link: [./tracks/selection_advanced_features_20260406/](./tracks/selection_advanced_features_20260406/)*
 - [ ] **Track: Selection Persistence & Session Management**
   *Link: [./tracks/selection_persistence_20260406/](./tracks/selection_persistence_20260406/)*
