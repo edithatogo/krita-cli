@@ -667,6 +667,58 @@ def krita_deselect() -> str:
 
 
 @mcp.tool()
+def krita_select_by_color(
+    x: int | None = None,
+    y: int | None = None,
+    tolerance: float = 0.1,
+    contiguous: bool = True,
+) -> str:
+    """Select pixels by color similarity.
+
+    Use x,y for magic wand (contiguous region from point).
+    Omit x,y for global color selection across entire canvas.
+
+    Args:
+        x: X coordinate for magic wand (None for global).
+        y: Y coordinate for magic wand (None for global).
+        tolerance: Color tolerance 0.0-1.0 (default 0.1).
+        contiguous: True for magic wand, False for global (default True).
+    """
+    try:
+        client = _get_client()
+        result = client.select_by_color(x=x, y=y, tolerance=tolerance, contiguous=contiguous)
+        if "error" in result:
+            return f"Error: {result['error']}"
+        method = "Magic wand" if contiguous else "Global"
+        count = result.get("selected_count", 0)
+        return f"{method} color selection: {count} pixels (tolerance={tolerance})"
+    except KritaError as exc:
+        return _format_error(exc)
+
+
+@mcp.tool()
+def krita_select_by_alpha(
+    min_alpha: int = 1,
+    max_alpha: int = 255,
+) -> str:
+    """Select pixels by alpha value range.
+
+    Args:
+        min_alpha: Minimum alpha value 0-255 (default 1).
+        max_alpha: Maximum alpha value 0-255 (default 255).
+    """
+    try:
+        client = _get_client()
+        result = client.select_by_alpha(min_alpha=min_alpha, max_alpha=max_alpha)
+        if "error" in result:
+            return f"Error: {result['error']}"
+        count = result.get("selected_count", 0)
+        return f"Alpha selection: {count} pixels (alpha={min_alpha}-{max_alpha})"
+    except KritaError as exc:
+        return _format_error(exc)
+
+
+@mcp.tool()
 def krita_get_capabilities() -> str:
     """Get detected API capabilities from the Krita plugin."""
     try:
@@ -674,7 +726,6 @@ def krita_get_capabilities() -> str:
         result = client.get_capabilities()
         if "error" in result:
             return f"Error: {result['error']}"
-        caps = result.get("capabilities", {})
         available = result.get("selection_tools", [])
         if available:
             return f"Available selection tools: {', '.join(available)}"
@@ -750,6 +801,62 @@ def krita_border_selection(pixels: int) -> str:
 
 
 @mcp.tool()
+def krita_save_selection(path: str) -> str:
+    """Save the current selection as a PNG mask image (white=selected, black=unselected)."""
+    try:
+        client = _get_client()
+        result = client.save_selection(path=path)
+        if "error" in result:
+            return f"Error: {result['error']}"
+        return f"Saved selection to {path}"
+    except KritaError as exc:
+        return _format_error(exc)
+
+
+@mcp.tool()
+def krita_load_selection(path: str) -> str:
+    """Load a selection from a PNG mask image (white=selected, black=unselected)."""
+    try:
+        client = _get_client()
+        result = client.load_selection(path=path)
+        if "error" in result:
+            return f"Error: {result['error']}"
+        return f"Loaded selection from {path}"
+    except KritaError as exc:
+        return _format_error(exc)
+
+
+@mcp.tool()
+def krita_selection_stats() -> str:
+    """Get statistics about the current selection (pixel count, centroid, bounding box, area %)."""
+    try:
+        client = _get_client()
+        result = client.selection_stats()
+        if "error" in result:
+            return f"Error: {result['error']}"
+        count = result.get("pixel_count", 0)
+        bbox = result.get("bounding_box", {})
+        centroid = result.get("centroid", {})
+        area_pct = result.get("area_percentage")
+        parts = [f"Pixel count: {count}"]
+        if bbox:
+            w = bbox.get("width", "?")
+            h = bbox.get("height", "?")
+            bx = bbox.get("x", "?")
+            by = bbox.get("y", "?")
+            parts.append(f"Bounding box: {w}x{h} at ({bx}, {by})")
+        if centroid:
+            cx = centroid.get("x", "?")
+            cy = centroid.get("y", "?")
+            parts.append(f"Centroid: ({cx}, {cy})")
+        if area_pct is not None:
+            parts.append(f"Area: {area_pct:.1f}% of canvas")
+        return "Selection stats: " + " | ".join(parts)
+    except KritaError as exc:
+        return _format_error(exc)
+
+
+@mcp.tool()
 def krita_security_status() -> str:
     """Get current security limits and usage from the Krita plugin."""
     try:
@@ -802,6 +909,11 @@ def krita_list_tools() -> str:
         ("krita_grow_selection", "Grow selection by N pixels"),
         ("krita_shrink_selection", "Shrink selection by N pixels"),
         ("krita_border_selection", "Create border around selection"),
+        ("krita_save_selection", "Save selection as PNG mask"),
+        ("krita_load_selection", "Load selection from PNG mask"),
+        ("krita_selection_stats", "Get selection statistics"),
+        ("krita_select_by_color", "Select by color (magic wand/global)"),
+        ("krita_select_by_alpha", "Select by alpha range"),
         ("krita_get_capabilities", "Get detected API capabilities"),
         ("krita_security_status", "Get security limits and usage"),
         ("krita_list_tools", "List all available MCP tools"),
