@@ -8,8 +8,6 @@ This file tracks all major tracks for the project. Each track has its own detail
   *Link: [./tracks/implement_batch_operations_endpoint_20260405/](./tracks/implement_batch_operations_endpoint_20260405/)*
 - [x] **Track: Selection Tools**
   *Link: [./tracks/selection_tools_20260406/](./tracks/selection_tools_20260406/)*
-- [x] **Track: Performance Benchmarking CI**
-  *Link: [./tracks/performance_benchmarking_ci_20260406/](./tracks/performance_benchmarking_ci_20260406/)*
 - [ ] **Track: Windows-Specific Testing**
   *Link: [./tracks/windows_testing_20260406/](./tracks/windows_testing_20260406/)*
 
