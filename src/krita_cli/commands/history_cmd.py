@@ -36,8 +36,8 @@ def history(
         records_raw = result.get("history", [])
         if not isinstance(records_raw, list):
             records_raw = []
-        records = cast(list[dict[str, Any]], records_raw)
-        
+        records = cast("list[dict[str, Any]]", records_raw)
+
         if not records:
             console.print("[dim]No command history recorded.[/dim]")
             return

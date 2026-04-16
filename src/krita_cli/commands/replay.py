@@ -58,7 +58,7 @@ def _execute_replay(
             if "error" in result:
                 err_raw = result.get("error", {})
                 if isinstance(err_raw, dict):
-                    err_dict = cast(dict[str, Any], err_raw)
+                    err_dict = cast("dict[str, Any]", err_raw)
                     err_msg = str(err_dict.get("message", str(err_raw)))
                 else:
                     err_msg = str(err_raw)

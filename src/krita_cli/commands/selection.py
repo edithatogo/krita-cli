@@ -119,7 +119,7 @@ def selection_info(ctx: Context) -> None:
             bounds_raw = result.get("bounds", {})
             if not isinstance(bounds_raw, dict):
                 bounds_raw = {}
-            bounds = cast(dict[str, Any], bounds_raw)
+            bounds = cast("dict[str, Any]", bounds_raw)
             console.print(
                 f"[green]Active selection:[/green] x={bounds.get('x')}, y={bounds.get('y')}, "
                 f"w={bounds.get('width')}, h={bounds.get('height')}"
@@ -259,8 +259,8 @@ def selection_stats(ctx: Context) -> None:
         bbox_raw = result.get("bounding_box", {})
         if not isinstance(bbox_raw, dict):
             bbox_raw = {}
-        bbox = cast(dict[str, Any], bbox_raw)
-        
+        bbox = cast("dict[str, Any]", bbox_raw)
+
         console.print("[green]Selection Statistics:[/green]")
         console.print(f"  Pixel count: [bold]{count}[/bold]")
         if bbox:
@@ -271,13 +271,13 @@ def selection_stats(ctx: Context) -> None:
         centroid_raw = result.get("centroid", {})
         if not isinstance(centroid_raw, dict):
             centroid_raw = {}
-        centroid = cast(dict[str, Any], centroid_raw)
-        
+        centroid = cast("dict[str, Any]", centroid_raw)
+
         if centroid:
             console.print(f"  Centroid: ({centroid.get('x', '?')}, {centroid.get('y', '?')})")
         area_pct = result.get("area_percentage")
         if area_pct is not None:
-            pct = float(cast(Any, area_pct))
+            pct = float(cast("Any", area_pct))
             console.print(f"  Area: {pct:.1f}% of canvas")
 
 
@@ -314,8 +314,8 @@ def list_channels(ctx: Context) -> None:
         channels_raw = result.get("channels", [])
         if not isinstance(channels_raw, list):
             channels_raw = []
-        channels = cast(list[dict[str, Any]], channels_raw)
-        
+        channels = cast("list[dict[str, Any]]", channels_raw)
+
         count = result.get("count", 0)
         if count == 0:
             console.print("[dim]No saved selection channels[/dim]")
@@ -346,12 +346,12 @@ def security_status(ctx: Context) -> None:
         rl_raw = result.get("rate_limit", {})
         if not isinstance(rl_raw, dict):
             rl_raw = {}
-        rl = cast(dict[str, Any], rl_raw)
-        
+        rl = cast("dict[str, Any]", rl_raw)
+
         payload_limit = result.get("payload_limit", 0)
-        if not (isinstance(payload_limit, int) or isinstance(payload_limit, float)):
+        if not isinstance(payload_limit, (int, float)):
             payload_limit = 0
-            
+
         console.print("[green]Security Status:[/green]")
         console.print(
             f"  Rate limit: [dim]{rl.get('current_usage', 0)}/{rl.get('max_commands_per_minute', '?')} per minute[/dim]"

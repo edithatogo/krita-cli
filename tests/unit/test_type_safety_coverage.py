@@ -5,11 +5,11 @@ from __future__ import annotations
 import json
 from unittest.mock import MagicMock, patch
 
-import pytest
-from krita_mcp import server as server_mod
+from typer.testing import CliRunner
+
 from krita_cli.app import app
 from krita_client import KritaError
-from typer.testing import CliRunner
+from krita_mcp import server as server_mod
 
 
 def test_server_health_error() -> None:
@@ -18,7 +18,7 @@ def test_server_health_error() -> None:
         mock_client = MagicMock()
         mock_client.health.side_effect = KritaError("generic error", code="ERR")
         mock_get.return_value = mock_client
-        
+
         result = server_mod.krita_health()
         assert "[ERR] generic error" in result
 
@@ -29,7 +29,7 @@ def test_server_tools_error_coverage() -> None:
         (server_mod.krita_new_canvas, {}),
         (server_mod.krita_set_color, {"color": "#000"}),
         (server_mod.krita_set_brush, {}),
-        (server_mod.krita_stroke, {"points": [[0,0]]}),
+        (server_mod.krita_stroke, {"points": [[0, 0]]}),
         (server_mod.krita_fill, {"x": 0, "y": 0}),
         (server_mod.krita_draw_shape, {"shape": "line", "x": 0, "y": 0}),
         (server_mod.krita_get_canvas, {}),
@@ -48,7 +48,7 @@ def test_server_tools_error_coverage() -> None:
         (server_mod.krita_get_current_brush, {}),
         (server_mod.krita_select_rect, {"x": 0, "y": 0, "width": 1, "height": 1}),
         (server_mod.krita_select_ellipse, {"cx": 0, "cy": 0, "rx": 1, "ry": 1}),
-        (server_mod.krita_select_polygon, {"points": [[0,0]]}),
+        (server_mod.krita_select_polygon, {"points": [[0, 0]]}),
         (server_mod.krita_selection_info, {}),
         (server_mod.krita_clear_selection, {}),
         (server_mod.krita_invert_selection, {}),
@@ -83,17 +83,17 @@ def test_server_tools_error_coverage() -> None:
     for tool_func, kwargs in tools:
         with patch("krita_mcp.server._get_client") as mock_get:
             mock_client = MagicMock()
-            
+
             base_name = tool_func.__name__.replace("krita_", "")
             method_name = mapping.get(base_name, base_name)
-            
+
             # Case 1: result contains "error"
             getattr(mock_client, method_name).return_value = {"error": "tool fail"}
             mock_get.return_value = mock_client
-            
+
             result = tool_func(**kwargs)
             assert "tool fail" in result
-            
+
             # Case 2: KritaError raised
             getattr(mock_client, method_name).side_effect = KritaError("exc fail")
             result = tool_func(**kwargs)
@@ -105,17 +105,17 @@ def test_server_batch_type_safety_extended() -> None:
     with patch("krita_mcp.server._get_client") as mock_get:
         mock_client = MagicMock()
         mock_get.return_value = mock_client
-        
+
         # Test error details loop fully
         mock_client.batch_execute.return_value = {
             "results": [
                 {"status": "error", "action": "a1", "error": "err1"},
                 {"status": "error", "action": "a2", "result": {"error": {"message": "err2"}}},
                 {"status": "error", "action": "a3", "result": {"error": "err3"}},
-                {"status": "error", "action": "a4"}, # unknown err_msg
-                "not a dict"
+                {"status": "error", "action": "a4"},  # unknown err_msg
+                "not a dict",
             ],
-            "status": "error"
+            "status": "error",
         }
         result = server_mod.krita_batch([{"action": "test"}])
         assert "a1: err1" in result
@@ -131,7 +131,7 @@ def test_cli_replay_array_check() -> None:
         f = "not_array.json"
         with open(f, "w") as j:
             json.dump({"not": "an array"}, j)
-        
+
         result = runner.invoke(app, ["replay", f])
         assert "JSON file must contain an array" in result.output
 
@@ -142,7 +142,7 @@ def test_cli_history_empty_check() -> None:
         mock_client = MagicMock()
         mock_client.get_command_history.return_value = {"history": []}
         mock_get.return_value = mock_client
-        
+
         runner = CliRunner()
         result = runner.invoke(app, ["history"])
         assert "No command history recorded" in result.output
@@ -156,7 +156,7 @@ def test_cli_history_with_error_check() -> None:
             "history": [{"action": "test", "status": "error", "error": "fail", "duration_ms": 10}]
         }
         mock_get.return_value = mock_client
-        
+
         runner = CliRunner()
         result = runner.invoke(app, ["history"])
         assert "fail" in result.output
@@ -168,11 +168,11 @@ def test_cli_rollback_error_path() -> None:
         mock_client = MagicMock()
         mock_client.rollback.side_effect = KritaError("rollback fail")
         mock_get.return_value = mock_client
-        
+
         runner = CliRunner()
         result = runner.invoke(app, ["rollback", "123"])
         assert "rollback fail" in result.output
-        
+
     with patch("krita_cli._shared._get_client") as mock_get:
         mock_client = MagicMock()
         mock_client.rollback.return_value = {"message": "done"}
@@ -186,8 +186,8 @@ def test_server_rollback_fallback() -> None:
     """Test krita_rollback message fallback."""
     with patch("krita_mcp.server._get_client") as mock_get:
         mock_client = MagicMock()
-        mock_client.rollback.return_value = {} # no message
+        mock_client.rollback.return_value = {}  # no message
         mock_get.return_value = mock_client
-        
+
         result = server_mod.krita_rollback("123")
         assert "Rollback successful" in result

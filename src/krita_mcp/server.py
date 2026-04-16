@@ -6,10 +6,7 @@ the krita_client library.
 
 from __future__ import annotations
 
-import logging
-import os
-from datetime import UTC, datetime
-from typing import Annotated, Any, Iterable, Sized, cast
+from typing import Any, cast
 
 from fastmcp import FastMCP
 
@@ -397,12 +394,12 @@ def krita_batch(
         result = client.batch_execute(commands, stop_on_error=stop_on_error)
         if "error" in result:
             return f"Error: {result['error']}"
-        
+
         results_raw = result.get("results", [])
         if not isinstance(results_raw, list):
             results_raw = []
-        results = cast(list[dict[str, Any]], results_raw)
-        
+        results = cast("list[dict[str, Any]]", results_raw)
+
         ok = sum(1 for r in results if isinstance(r, dict) and r.get("status") == "ok")
         errs = sum(1 for r in results if isinstance(r, dict) and r.get("status") == "error")
         summary = f"Batch: {ok} succeeded, {errs} failed out of {len(results)}"
@@ -415,26 +412,27 @@ def krita_batch(
             error_details = []
             for r in results:
                 if isinstance(r, dict) and r.get("status") == "error":
-                    # Try to get error from top level first, then from nested result
-                    err_msg = r.get("error")
-                    if not err_msg:
-                        result_data = r.get("result", {})
-                        if isinstance(result_data, dict) and "error" in result_data:
-                            err_info = result_data["error"]
-                            if isinstance(err_info, dict):
-                                err_msg = err_info.get("message", str(err_info))
-                            else:
-                                err_msg = str(err_info)
-
-                    if not err_msg:
-                        err_msg = "unknown"
-
+                    err_msg = _extract_batch_error(r)
                     error_details.append(f"  - {r.get('action', 'unknown')}: {err_msg}")
             if error_details:
                 summary += "\nErrors:\n" + "\n".join(error_details)
         return summary
     except KritaError as exc:
         return _format_error(exc)
+
+
+def _extract_batch_error(r: dict[str, Any]) -> str:
+    """Extract error message from a batch result entry."""
+    err_msg = r.get("error")
+    if not err_msg:
+        result_data = r.get("result", {})
+        if isinstance(result_data, dict) and "error" in result_data:
+            err_info = result_data["error"]
+            err_msg = err_info.get("message", str(err_info)) if isinstance(err_info, dict) else str(err_info)
+
+    if not err_msg:
+        err_msg = "unknown"
+    return str(err_msg)
 
 
 @mcp.tool()
@@ -477,8 +475,8 @@ def krita_get_command_history(
         records_raw = result.get("history", [])
         if not isinstance(records_raw, list):
             records_raw = []
-        records = cast(list[dict[str, Any]], records_raw)
-        
+        records = cast("list[dict[str, Any]]", records_raw)
+
         if not records:
             return "No command history recorded."
         lines = [f"Command History ({len(records)} entries):"]
@@ -633,7 +631,7 @@ def krita_selection_info() -> str:
             bounds_raw = result.get("bounds", {})
             if not isinstance(bounds_raw, dict):
                 bounds_raw = {}
-            b = cast(dict[str, Any], bounds_raw)
+            b = cast("dict[str, Any]", bounds_raw)
             return f"Selection: x={b.get('x')}, y={b.get('y')}, w={b.get('width')}, h={b.get('height')}"
         return "No active selection"
     except KritaError as exc:
@@ -867,13 +865,13 @@ def krita_selection_stats() -> str:
         bbox_raw = result.get("bounding_box", {})
         if not isinstance(bbox_raw, dict):
             bbox_raw = {}
-        bbox = cast(dict[str, Any], bbox_raw)
-        
+        bbox = cast("dict[str, Any]", bbox_raw)
+
         centroid_raw = result.get("centroid", {})
         if not isinstance(centroid_raw, dict):
             centroid_raw = {}
-        centroid = cast(dict[str, Any], centroid_raw)
-        
+        centroid = cast("dict[str, Any]", centroid_raw)
+
         area_pct = result.get("area_percentage")
         parts = [f"Pixel count: {count}"]
         if bbox:
@@ -888,7 +886,7 @@ def krita_selection_stats() -> str:
             parts.append(f"Centroid: ({cx}, {cy})")
         if area_pct is not None:
             # Handle possible float conversion for type safety
-            pct = float(cast(Any, area_pct))
+            pct = float(cast("Any", area_pct))
             parts.append(f"Area: {pct:.1f}% of canvas")
         return "Selection stats: " + " | ".join(parts)
     except KritaError as exc:
@@ -932,8 +930,8 @@ def krita_list_selection_channels() -> str:
         channels_raw = result.get("channels", [])
         if not isinstance(channels_raw, list):
             channels_raw = []
-        channels = cast(list[dict[str, Any]], channels_raw)
-        
+        channels = cast("list[dict[str, Any]]", channels_raw)
+
         count = result.get("count", 0)
         if count == 0:
             return "No saved selection channels"
@@ -954,12 +952,12 @@ def krita_security_status() -> str:
         rl_raw = result.get("rate_limit", {})
         if not isinstance(rl_raw, dict):
             rl_raw = {}
-        rl = cast(dict[str, Any], rl_raw)
-        
+        rl = cast("dict[str, Any]", rl_raw)
+
         payload_limit = result.get("payload_limit", 0)
-        if not (isinstance(payload_limit, int) or isinstance(payload_limit, float)):
+        if not isinstance(payload_limit, (int, float)):
             payload_limit = 0
-            
+
         parts = [
             f"Rate limit: {rl.get('current_usage', 0)}/{rl.get('max_commands_per_minute', '?')} per minute",
             f"Payload limit: {float(payload_limit) / (1024 * 1024):.0f}MB",

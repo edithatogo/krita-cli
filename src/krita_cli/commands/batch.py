@@ -56,8 +56,8 @@ def batch(
         results_raw = result.get("results", [])
         if not isinstance(results_raw, list):
             results_raw = []
-        results = cast(list[dict[str, Any]], results_raw)
-        
+        results = cast("list[dict[str, Any]]", results_raw)
+
         ok = sum(1 for r in results if isinstance(r, dict) and r.get("status") == "ok")
         errs = sum(1 for r in results if isinstance(r, dict) and r.get("status") == "error")
         count = result.get("count", 0)
