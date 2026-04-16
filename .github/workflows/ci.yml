@@ -42,8 +42,8 @@ jobs:
       - run: uv sync --frozen
       - run: uv run ty check src/ types/
 
-  test-unit:
-    name: Unit Tests
+  test:
+    name: All Tests
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -57,35 +57,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - run: uv sync --frozen
-      - run: uv run pytest tests/unit/ -v --cov=krita_client --cov=krita_mcp --cov=krita_cli --cov-fail-under=95
-
-  test-integration:
-    name: Integration Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-        with:
-          version: ${{ env.UV_VERSION }}
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-      - run: uv sync --frozen
-      - run: uv run pytest tests/integration/ -v
-
-  test-property:
-    name: Property-Based Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-        with:
-          version: ${{ env.UV_VERSION }}
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-      - run: uv sync --frozen
-      - run: uv run pytest tests/property/ -v
+      - run: uv run pytest tests/ -v --cov=krita_client --cov=krita_mcp --cov=krita_cli --cov-fail-under=95
 
   test-e2e-mock:
     name: E2E Tests (Mock Plugin)
@@ -104,7 +76,7 @@ jobs:
   build:
     name: Build Package
     runs-on: ubuntu-latest
-    needs: [lint, typecheck, test-unit, test-integration]
+    needs: [lint, typecheck, test]
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
@@ -125,7 +97,7 @@ jobs:
       name: pypi
       url: https://pypi.org/p/krita-cli
     permissions:
-      id-token: write  # Mandatory for OIDC
+      id-token: write
     steps:
       - uses: actions/download-artifact@v4
         with:
