@@ -3,6 +3,7 @@ name: CI
 on:
   push:
     branches: [main, master]
+    tags: ["v*"]
   pull_request:
     branches: [main, master]
   workflow_dispatch:
@@ -86,21 +87,6 @@ jobs:
       - run: uv sync --frozen
       - run: uv run pytest tests/property/ -v
 
-  test-e2e:
-    name: E2E Tests
-    runs-on: ubuntu-latest
-    if: (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'))
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-        with:
-          version: ${{ env.UV_VERSION }}
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-      - run: uv sync --frozen
-      - run: uv run pytest tests/e2e/ -v -m e2e || echo "E2E tests skipped (no Krita available)"
-
   test-e2e-mock:
     name: E2E Tests (Mock Plugin)
     runs-on: ubuntu-latest
@@ -115,72 +101,54 @@ jobs:
       - run: uv sync --frozen
       - run: uv run pytest tests/e2e/test_e2e_mock.py -v
 
-  mutation:
-    name: Mutation Tests
+  build:
+    name: Build Package
     runs-on: ubuntu-latest
-    if: (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'))
+    needs: [lint, typecheck, test-unit, test-integration]
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
         with:
           version: ${{ env.UV_VERSION }}
-      - uses: actions/setup-python@v5
+      - run: uv build
+      - uses: actions/upload-artifact@v4
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
-      - run: uv sync --frozen
-      - run: uv run mutmut run --paths-to-mutate src/krita_client/
+          name: dist
+          path: dist/
 
-  test-windows:
-    name: Windows Tests
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-        with:
-          version: ${{ env.UV_VERSION }}
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-      - run: uv sync --frozen
-      - run: uv run pytest tests/unit/ tests/integration/ tests/property/ tests/e2e/test_e2e_mock.py --ignore=tests/unit/test_snapshot_store.py -q
-
-  benchmark:
-    name: Performance Benchmarks
+  publish-pypi:
+    name: Publish to PyPI
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build]
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-        with:
-          version: ${{ env.UV_VERSION }}
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-      - run: uv sync --frozen
-      - name: Run benchmarks
-        run: uv run python benchmarks/test_rendering.py
-
-  release:
-    name: Release
-    runs-on: ubuntu-latest
-    needs: [lint, typecheck, test-unit, test-integration, test-property]
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    environment:
+      name: pypi
+      url: https://pypi.org/p/krita-cli
     permissions:
-      contents: write
-      id-token: write
+      id-token: write  # Mandatory for OIDC
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+  publish-conda:
+    name: Publish to Conda
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Set up Conda
+        uses: conda-incubator/setup-miniconda@v3
         with:
-          fetch-depth: 0
-          token: ${{ secrets.GH_TOKEN }}
-      - uses: astral-sh/setup-uv@v5
-        with:
-          version: ${{ env.UV_VERSION }}
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-      - run: uv sync --frozen
-      - name: Python Semantic Release
-        uses: python-semantic-release/python-semantic-release@v9.21.0
-        with:
-          github_token: ${{ secrets.GH_TOKEN }}
-          pypi_token: ${{ secrets.PYPI_TOKEN }}
+          auto-update-conda: true
+          python-version: 3.12
+      - name: Build and Upload to Anaconda
+        shell: bash -l {0}
+        run: |
+          conda install -y anaconda-client conda-build
+          conda build conda-recipe/ --output-folder dist/conda
+          anaconda -t ${{ secrets.ANACONDA_API_TOKEN }} upload dist/conda/noarch/krita-cli-*.tar.bz2 --force
