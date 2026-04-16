@@ -49,6 +49,8 @@ def krita_health() -> str:
     try:
         client = _get_client()
         result = client.health()
+        if "error" in result:
+            return f"Error: {result['error']}"
         plugin = result.get("plugin", "unknown")
         status = result.get("status", "unknown")
         return f"Krita is running. Plugin: {plugin} ({status})"
@@ -393,13 +395,16 @@ def krita_batch(
     try:
         client = _get_client()
         result = client.batch_execute(commands, stop_on_error=stop_on_error)
+        if "error" in result:
+            return f"Error: {result['error']}"
+        
         results_raw = result.get("results", [])
         if not isinstance(results_raw, list):
             results_raw = []
         results = cast(list[dict[str, Any]], results_raw)
         
-        ok = sum(1 for r in results if r.get("status") == "ok")
-        errs = sum(1 for r in results if r.get("status") == "error")
+        ok = sum(1 for r in results if isinstance(r, dict) and r.get("status") == "ok")
+        errs = sum(1 for r in results if isinstance(r, dict) and r.get("status") == "error")
         summary = f"Batch: {ok} succeeded, {errs} failed out of {len(results)}"
 
         batch_id = result.get("batch_id")
@@ -409,7 +414,7 @@ def krita_batch(
         if errs > 0:
             error_details = []
             for r in results:
-                if r.get("status") == "error":
+                if isinstance(r, dict) and r.get("status") == "error":
                     # Try to get error from top level first, then from nested result
                     err_msg = r.get("error")
                     if not err_msg:
@@ -424,8 +429,9 @@ def krita_batch(
                     if not err_msg:
                         err_msg = "unknown"
 
-                    error_details.append(f"  - {r.get('action')}: {err_msg}")
-            summary += "\nErrors:\n" + "\n".join(error_details)
+                    error_details.append(f"  - {r.get('action', 'unknown')}: {err_msg}")
+            if error_details:
+                summary += "\nErrors:\n" + "\n".join(error_details)
         return summary
     except KritaError as exc:
         return _format_error(exc)
@@ -466,6 +472,8 @@ def krita_get_command_history(
     try:
         client = _get_client()
         result = client.get_command_history(limit=limit)
+        if "error" in result:
+            return f"Error: {result['error']}"
         records_raw = result.get("history", [])
         if not isinstance(records_raw, list):
             records_raw = []

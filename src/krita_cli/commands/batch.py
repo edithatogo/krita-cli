@@ -58,8 +58,8 @@ def batch(
             results_raw = []
         results = cast(list[dict[str, Any]], results_raw)
         
-        ok = sum(1 for r in results if r.get("status") == "ok")
-        errs = sum(1 for r in results if r.get("status") == "error")
+        ok = sum(1 for r in results if isinstance(r, dict) and r.get("status") == "ok")
+        errs = sum(1 for r in results if isinstance(r, dict) and r.get("status") == "error")
         count = result.get("count", 0)
         color = "green" if status == "ok" else "red" if status == "error" else "yellow"
         console.print(f"[{color}]Batch: {status}[/{color}]")
@@ -70,7 +70,7 @@ def batch(
         if errs > 0:
             console.print("[red]Errors:[/red]")
             for r in results:
-                if r.get("status") == "error":
+                if isinstance(r, dict) and r.get("status") == "error":
                     err_msg = r.get("error")
                     if not err_msg:
                         result_data = r.get("result", {})
