@@ -60,8 +60,12 @@ class CommandHistory:
         self._append_to_system_log(entry)
 
         if self._recording_enabled and self._history_file is not None:
-            self._history_file.parent.mkdir(parents=True, exist_ok=True)
-            self._history_file.write_text(json.dumps(self._history, indent=2))
+            try:
+                self._history_file.parent.mkdir(parents=True, exist_ok=True)
+                self._history_file.write_text(json.dumps(self._history, indent=2))
+            except Exception:
+                # Persistent history write should not crash the CLI
+                pass
 
     def get_history(self) -> list[dict[str, Any]]:
         """Return the current command history."""
@@ -125,7 +129,8 @@ class CommandHistory:
             params = entry.get("params", {})
             try:
                 result = client.send_command(action, params)
-                results.append({"action": action, "status": "ok", "result": result})
+                status = result.get("status", "ok")
+                results.append({"action": action, "status": status, "result": result})
             except KritaError as exc:
                 results.append({"action": action, "status": "error", "error": exc.message})
 

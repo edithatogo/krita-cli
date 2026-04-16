@@ -112,6 +112,76 @@ class TestE2EClippingAwareness:
         assert result["status"] == "ok"
         assert result.get("clipped_by_selection") is True
 
+    def test_fill_with_selection_has_clipping_notice(self, e2e_client: KritaClient) -> None:
+        """Fill with active selection should include clipping notice."""
+        e2e_client.select_rect(x=0, y=0, width=100, height=100)
+        result = e2e_client.fill(x=50, y=50, radius=30)
+        assert result["status"] == "ok"
+        assert result.get("clipped_by_selection") is True
+
+    def test_draw_shape_with_selection_has_clipping_notice(self, e2e_client: KritaClient) -> None:
+        """Draw shape with active selection should include clipping notice."""
+        e2e_client.select_rect(x=0, y=0, width=100, height=100)
+        result = e2e_client.draw_shape("rectangle", x=10, y=10, width=50, height=50)
+        assert result["status"] == "ok"
+        assert result.get("clipped_by_selection") is True
+
+
+class TestE2ESelectionUndoRedo:
+    """E2E tests for selection undo/redo support."""
+
+    def test_undo_restores_selection_state(self, e2e_client: KritaClient) -> None:
+        """Undo should restore previous selection state."""
+        # Create initial selection
+        e2e_client.select_rect(x=0, y=0, width=100, height=100)
+        info_before = e2e_client.selection_info()
+        assert info_before["has_selection"] is True
+
+        # Clear selection
+        e2e_client.deselect()
+        info_after_clear = e2e_client.selection_info()
+        assert info_after_clear["has_selection"] is False
+
+        # Undo should restore selection
+        result = e2e_client.undo()
+        assert result["status"] == "ok"
+        assert result.get("undone") is True
+
+        info_after_undo = e2e_client.selection_info()
+        assert info_after_undo["has_selection"] is True
+
+    def test_redo_restores_selection_after_undo(self, e2e_client: KritaClient) -> None:
+        """Redo should reapply selection operation after undo."""
+        # Create selection
+        e2e_client.select_rect(x=0, y=0, width=100, height=100)
+        
+        # Clear selection
+        e2e_client.deselect()
+        info_after_clear = e2e_client.selection_info()
+        assert info_after_clear["has_selection"] is False
+        
+        # Undo to restore selection
+        result = e2e_client.undo()
+        assert result["status"] == "ok"
+        assert result.get("undone") is True
+        
+        info_after_undo = e2e_client.selection_info()
+        assert info_after_undo["has_selection"] is True
+
+        # Redo should re-apply the deselect
+        result = e2e_client.redo()
+        assert result["status"] == "ok"
+        assert result.get("redone") is True
+
+        info_after_redo = e2e_client.selection_info()
+        assert info_after_redo["has_selection"] is False
+
+    def test_undo_nothing_when_empty(self, e2e_client: KritaClient) -> None:
+        """Undo with no history should return nothing to undo."""
+        result = e2e_client.undo()
+        assert result["status"] == "ok"
+        assert result.get("undone") is False
+
 
 class TestE2EBatch:
     """E2E batch operation tests."""

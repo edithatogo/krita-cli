@@ -27,6 +27,7 @@ class MockKritaPluginHandler(BaseHTTPRequestHandler):
         "color": "#1a1a2e",
         "strokes": [],
         "selection": None,
+        "selection_history": [],  # For undo/redo of selection
         "history": [],
     }
 
@@ -39,6 +40,7 @@ class MockKritaPluginHandler(BaseHTTPRequestHandler):
             "color": "#1a1a2e",
             "strokes": [],
             "selection": None,
+            "selection_history": [],
             "history": [],
         }
 
@@ -85,7 +87,10 @@ class MockKritaPluginHandler(BaseHTTPRequestHandler):
             "set_color": self._cmd_set_color,
             "stroke": self._cmd_stroke,
             "fill": self._cmd_fill,
+            "draw_shape": self._cmd_draw_shape,
             "get_canvas": self._cmd_get_canvas,
+            "undo": self._cmd_undo,
+            "redo": self._cmd_redo,
             "select_rect": self._cmd_select_rect,
             "select_ellipse": self._cmd_select_ellipse,
             "select_polygon": self._cmd_select_polygon,
@@ -93,6 +98,8 @@ class MockKritaPluginHandler(BaseHTTPRequestHandler):
             "clear_selection": self._cmd_clear_selection,
             "invert_selection": self._cmd_invert_selection,
             "deselect": self._cmd_deselect,
+            "select_by_color": self._cmd_select_by_color,
+            "select_by_alpha": self._cmd_select_by_alpha,
             "batch": self._cmd_batch,
             "get_command_history": self._cmd_history,
             "get_capabilities": self._cmd_capabilities,
@@ -125,12 +132,26 @@ class MockKritaPluginHandler(BaseHTTPRequestHandler):
         return result
 
     def _cmd_fill(self, params: dict[str, Any]) -> dict[str, Any]:
-        return {"status": "ok", "x": params.get("x", 0), "y": params.get("y", 0)}
+        result: dict[str, object] = {"status": "ok", "x": params.get("x", 0), "y": params.get("y", 0)}
+        if self._state["selection"]:
+            result["clipped_by_selection"] = True
+        return result
+
+    def _cmd_draw_shape(self, params: dict[str, Any]) -> dict[str, Any]:
+        result: dict[str, object] = {"status": "ok", "shape": params.get("shape", "unknown")}
+        if self._state["selection"]:
+            result["clipped_by_selection"] = True
+        return result
 
     def _cmd_get_canvas(self, params: dict[str, Any]) -> dict[str, Any]:
         return {"status": "ok", "path": "/tmp/mock_canvas.png"}
 
     def _cmd_select_rect(self, params: dict[str, Any]) -> dict[str, Any]:
+        # Save to history before changing selection
+        if self._state["selection"] is not None:
+            self._state["selection_history"].append(self._state["selection"])
+            # Clear redo stack when new action is performed
+            self._state.setdefault("redo_stack", []).clear()
         self._state["selection"] = {"type": "rect", "params": params}
         return {"status": "ok", "x": params["x"], "y": params["y"], "width": params["width"], "height": params["height"]}
 
@@ -157,8 +178,34 @@ class MockKritaPluginHandler(BaseHTTPRequestHandler):
         return {"status": "ok"}
 
     def _cmd_deselect(self, params: dict[str, Any]) -> dict[str, Any]:
+        # Save to history before clearing (for undo)
+        if self._state["selection"] is not None:
+            self._state["selection_history"].append(self._state["selection"])
+            # Clear redo stack when new action is performed
+            self._state.setdefault("redo_stack", []).clear()
         self._state["selection"] = None
         return {"status": "ok"}
+
+    def _cmd_undo(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Undo the last selection operation."""
+        if self._state["selection_history"]:
+            # Save current state for redo
+            self._state.setdefault("redo_stack", []).append(self._state["selection"])
+            # Restore previous state
+            self._state["selection"] = self._state["selection_history"].pop()
+            return {"status": "ok", "undone": True}
+        return {"status": "ok", "undone": False, "message": "Nothing to undo"}
+
+    def _cmd_redo(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Redo the last undone selection operation."""
+        redo_stack = self._state.get("redo_stack", [])
+        if redo_stack:
+            # Save current state for undo
+            self._state["selection_history"].append(self._state["selection"])
+            # Restore redo state
+            self._state["selection"] = redo_stack.pop()
+            return {"status": "ok", "redone": True}
+        return {"status": "ok", "redone": False, "message": "Nothing to redo"}
 
     def _cmd_batch(self, params: dict[str, Any]) -> dict[str, Any]:
         commands = params.get("commands", [])
@@ -190,6 +237,59 @@ class MockKritaPluginHandler(BaseHTTPRequestHandler):
             "max_canvas_dim": 8192,
             "max_layers": 100,
         }
+
+    def _cmd_select_by_color(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Mock select by color selection."""
+        tolerance = params.get("tolerance", 0.1)
+        contiguous = params.get("contiguous", True)
+        x = params.get("x")
+        y = params.get("y")
+        
+        method = "contiguous" if contiguous else "global"
+        # Mock selected count based on tolerance
+        selected_count = int(1000 * (1.0 - tolerance))
+        
+        result: dict[str, object] = {
+            "status": "ok",
+            "selected_count": selected_count,
+            "method": method,
+            "tolerance": tolerance,
+        }
+        if x is not None and y is not None:
+            result["x"] = x
+            result["y"] = y
+        
+        # Set selection state
+        self._state["selection"] = {
+            "type": "color",
+            "params": params,
+            "selected_count": selected_count,
+        }
+        return result
+
+    def _cmd_select_by_alpha(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Mock select by alpha selection."""
+        min_alpha = params.get("min_alpha", 1)
+        max_alpha = params.get("max_alpha", 255)
+        
+        # Mock selected count based on alpha range
+        range_size = max_alpha - min_alpha
+        selected_count = int(5000 * (range_size / 255.0))
+        
+        result: dict[str, object] = {
+            "status": "ok",
+            "selected_count": selected_count,
+            "min_alpha": min_alpha,
+            "max_alpha": max_alpha,
+        }
+        
+        # Set selection state
+        self._state["selection"] = {
+            "type": "alpha",
+            "params": params,
+            "selected_count": selected_count,
+        }
+        return result
 
     def _send_json(self, data: dict[str, Any], status: int = 200) -> None:
         self.send_response(status)

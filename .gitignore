@@ -29,3 +29,12 @@ htmlcov/
 # OS
 .DS_Store
 Thumbs.db
+
+# Project
+logs/
+pytest-of-*/
+.swarm/
+.gemini/
+.geminiignore
+history.log
+refactor_plugin.py

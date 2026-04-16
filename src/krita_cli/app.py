@@ -78,6 +78,9 @@ from krita_cli.commands import (
     introspect as _introspect,
 )
 from krita_cli.commands import (
+    layers as _layers,
+)
+from krita_cli.commands import (
     navigation as _navigation,
 )
 from krita_cli.commands import (
@@ -101,11 +104,12 @@ app.add_typer(_navigation.app, name="navigation")
 app.add_typer(_file_ops.app, name="file")
 app.add_typer(_health.app)
 app.add_typer(_call.app)
-app.add_typer(_history_cmd.app, name="history")
+app.add_typer(_history_cmd.app)
 app.add_typer(_batch.app)
 app.add_typer(_rollback.app)
 app.add_typer(_introspect.app, name="introspect")
-app.add_typer(_replay.app, name="replay")
+app.add_typer(_layers.app, name="layers")
+app.add_typer(_replay.app)
 app.add_typer(_selection.app, name="selection")
 
 # Re-export command functions for backward compatibility (cli.py shim)

@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 from typer.testing import CliRunner
 
 from krita_cli.app import app
-from krita_client import KritaClient
+from krita_client import KritaClient, KritaError
 
 runner = CliRunner()
 
@@ -74,3 +74,47 @@ def test_cli_batch_stop_on_error(tmp_path) -> None:
 
         assert result.exit_code == 0
         mock_client.batch_execute.assert_called_once_with([{"action": "undo"}], stop_on_error=True)
+
+
+def test_cli_batch_partial_error(tmp_path) -> None:
+    batch_file = tmp_path / "commands.json"
+    batch_file.write_text(json.dumps([{"action": "invalid"}]))
+
+    with patch("krita_cli._shared._get_client") as mock_get:
+        mock_client = MagicMock(spec=KritaClient)
+        mock_client.batch_execute.return_value = {
+            "status": "partial",
+            "results": [
+                {"action": "invalid", "status": "error", "error": "Unknown action"},
+            ],
+            "count": 1,
+            "batch_id": "b123"
+        }
+        mock_get.return_value = mock_client
+
+        result = runner.invoke(app, ["batch", str(batch_file)])
+
+        assert result.exit_code == 0
+        assert "Batch: partial" in result.stdout
+        assert "Unknown action" in result.stdout
+        assert "Batch ID: b123" in result.stdout
+
+
+def test_cli_batch_full_error(tmp_path) -> None:
+    batch_file = tmp_path / "commands.json"
+    batch_file.write_text(json.dumps([{"action": "undo"}]))
+
+    with patch("krita_cli._shared._get_client") as mock_get:
+        mock_client = MagicMock(spec=KritaClient)
+        mock_client.batch_execute.side_effect = KritaError("Total failure")
+        mock_get.return_value = mock_client
+
+        result = runner.invoke(app, ["batch", str(batch_file)])
+        assert result.exit_code == 1
+        assert "Total failure" in result.stdout
+
+
+def test_cli_batch_missing_file() -> None:
+    result = runner.invoke(app, ["batch", "nonexistent.json"])
+    assert result.exit_code == 1
+    assert "Cannot read" in result.stdout

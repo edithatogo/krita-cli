@@ -319,6 +319,8 @@ def test_command_models_registry() -> None:
         "invert_selection",
         "fill_selection",
         "deselect",
+        "select_by_color",
+        "select_by_alpha",
         "transform_selection",
         "grow_selection",
         "shrink_selection",
@@ -327,5 +329,12 @@ def test_command_models_registry() -> None:
         "get_security_status",
         "get_command_history",
         "rollback",
+        "selection_stats",
+        "load_selection_channel",
+        "save_selection_channel",
+        "save_selection",
+        "load_selection",
+        "list_selection_channels",
+        "delete_selection_channel",
     }
     assert set(COMMAND_MODELS.keys()) == expected_actions

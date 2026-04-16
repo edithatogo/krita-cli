@@ -1,142 +1,70 @@
-# Krita MCP Server
+# Krita MCP Server & CLI
 
-Let AI paint in [Krita](https://krita.org/) via the [Model Context Protocol](https://modelcontextprotocol.io/).
+Let AI agents paint in [Krita](https://krita.org/) via the [Model Context Protocol](https://modelcontextprotocol.io/).
 
-This bridge allows Claude (or any MCP client) to create canvases, paint strokes, draw shapes, export images, and more — all inside a running Krita instance.
+This subproject provides the core implementation of the Krita-MCP ecosystem, including the FastMCP server, the `krita` CLI, and the high-performance Python plugin.
 
-## How It Works
+## 🛠️ Components
 
-Two components:
+1. **Krita Plugin** (`krita-plugin/`) — A Python plugin for Krita that exposes a thread-safe HTTP server on `localhost:5678`.
+2. **MCP Server** (`src/krita_mcp/`) — A FastMCP server exposing 40+ painting and manipulation tools.
+3. **Krita CLI** (`src/krita_cli/`) — A Typer-based command line interface for human operators.
+4. **Krita Client** (`src/krita_client/`) — A reusable, fully-typed Python library for Krita automation.
 
-1. **Krita Plugin** (`krita-plugin/`) — A Python plugin that runs inside Krita, exposing an HTTP server on `localhost:5678`. It receives paint commands and executes them on Krita's main thread via a command queue.
+## 🚀 Setup
 
-2. **MCP Server** (`server.py`) — A [FastMCP](https://github.com/jlowin/fastmcp) server that exposes painting tools to any MCP client. It translates MCP tool calls into HTTP requests to the Krita plugin.
+### 1. Krita Plugin Installation
+Copy the contents of `krita-plugin/` to your Krita resources:
+- **Windows**: `%APPDATA%\krita\pykrita\`
+- **Linux**: `~/.local/share/krita/pykrita/`
+- **macOS**: `~/Library/Application Support/krita/pykrita/`
 
-```
-MCP Client (Claude, etc.)  ←→  MCP Server (server.py)  ←→  Krita Plugin (HTTP on :5678)  ←→  Krita
-```
+Enable **"Krita MCP Bridge"** in Krita (Configure Krita → Python Plugin Manager) and restart.
 
-## Setup
-
-### 1. Install the Krita Plugin
-
-Copy the plugin files to your Krita plugins directory:
-
-| OS | Path |
-|----|------|
-| Windows | `%APPDATA%\krita\pykrita\` |
-| Linux | `~/.local/share/krita/pykrita/` |
-| macOS | `~/Library/Application Support/krita/pykrita/` |
-
-Copy both:
-- `krita-plugin/kritamcp/` (the folder with `__init__.py`)
-- `krita-plugin/kritamcp.desktop`
-
-Then in Krita: **Settings → Configure Krita → Python Plugin Manager → Enable "Krita MCP Bridge"** and restart Krita.
-
-### 2. Install the MCP Server
-
+### 2. Environment Setup
 ```bash
-pip install fastmcp httpx
+# Install dependencies with uv
+uv sync
 ```
 
-Or with a virtual environment:
-```bash
-python -m venv .venv
-source .venv/bin/activate  # or .venv\Scripts\activate on Windows
-pip install -r requirements.txt
-```
+## 🔧 CLI Commands
 
-### 3. Configure Your MCP Client
+The `krita` CLI is grouped into logical subcommands:
 
-Add to your MCP client config (e.g., Claude Desktop's `claude_desktop_config.json`):
+- **Painting**: `stroke`, `fill`, `clear`, `draw-shape`
+- **Layers**: `layers list`, `layers create`, `layers select`, `layers delete`
+- **Selection**: `selection select-rect`, `selection transform`, `selection save-channel`
+- **Canvas**: `canvas-info`, `current-color`, `current-brush`
+- **Session**: `history`, `replay`, `rollback`, `batch`
+- **System**: `health`, `config`, `capabilities`, `security-status`
 
-```json
-{
-  "mcpServers": {
-    "krita": {
-      "command": "python",
-      "args": ["/path/to/server.py"]
-    }
-  }
-}
-```
+Run `uv run krita --help` for full details.
 
-If using a virtual environment:
-```json
-{
-  "mcpServers": {
-    "krita": {
-      "command": "/path/to/.venv/Scripts/python",
-      "args": ["/path/to/server.py"]
-    }
-  }
-}
-```
+## 🤖 MCP Server Tools (40 Total)
 
-## Available Tools
+The MCP server exposes a vast range of capabilities to AI agents:
 
-| Tool | Description |
-|------|-------------|
-| `krita_health` | Check if Krita is running with the plugin active |
-| `krita_new_canvas` | Create a new canvas (width, height, background color) |
-| `krita_set_color` | Set foreground paint color (hex) |
-| `krita_set_brush` | Set brush preset, size, and opacity |
-| `krita_stroke` | Paint a stroke through a list of [x, y] points |
-| `krita_fill` | Fill a circular area at a point |
-| `krita_draw_shape` | Draw rectangle, ellipse, or line |
-| `krita_get_canvas` | Export canvas to PNG (for AI to see progress) |
-| `krita_save` | Save canvas to a specific file path |
-| `krita_undo` / `krita_redo` | Undo/redo actions |
-| `krita_clear` | Clear canvas to a solid color |
-| `krita_get_color_at` | Eyedropper — sample color at a pixel |
-| `krita_list_brushes` | List available brush presets |
-| `krita_open_file` | Open an existing .kra, .png, .jpg, etc. |
+| Category | Key Tools |
+|----------|-----------|
+| **Core** | `krita_health`, `krita_new_canvas`, `krita_save`, `krita_open_file` |
+| **Painting** | `krita_stroke`, `krita_fill`, `krita_draw_shape`, `krita_set_color`, `krita_set_brush` |
+| **Selection** | `krita_select_rect`, `krita_select_ellipse`, `krita_select_polygon`, `krita_select_by_color`, `krita_select_by_alpha` |
+| **Selection Ops** | `krita_transform_selection`, `krita_grow_selection`, `krita_combine_selections`, `krita_invert_selection` |
+| **Persistence** | `krita_save_selection`, `krita_load_selection`, `krita_save_selection_channel`, `krita_list_selection_channels` |
+| **Automation** | `krita_batch`, `krita_rollback`, `krita_get_command_history` |
+| **Inspection** | `krita_get_canvas_info`, `krita_get_color_at`, `krita_selection_stats`, `krita_security_status` |
 
-## The Export Timeout Fix
+## ⚡ Performance
 
-**This is the main reason this repo exists.**
+The plugin uses **numpy-accelerated** direct pixel manipulation for rendering. This ensures that strokes and shapes are rendered significantly faster than standard Python loops, especially on high-resolution canvases.
 
-By default, HTTP requests and command queue operations time out after ~30 seconds. Canvas export (`get_canvas`) and file save (`save`) operations can easily exceed this on larger canvases, causing silent failures or timeout errors.
+## 🔒 Security
 
-The fix is applied in two places:
+Krita MCP includes a built-in security layer to protect your system:
+- **Path Sanitization**: Restricts file operations to allowed directories.
+- **Resource Limits**: Prevents OOM by limiting max canvas dimensions and layer counts.
+- **Rate Limiting**: Throttles rapid command execution.
+- **Security Tool**: `krita_security_status` allows agents to check active limits.
 
-**MCP Server (`server.py`)** — Extended timeout for export/save commands:
-```python
-# In krita_get_canvas and krita_save:
-result = send_command("get_canvas", {"filename": filename}, timeout=120.0)
-result = send_command("save", {"path": path}, timeout=120.0)
-```
-
-**Krita Plugin (`__init__.py`)** — Matching timeout in the command queue:
-```python
-def get_result(self, command_id, timeout=120):
-    """Wait for result with timeout."""
-    for _ in range(int(timeout * 10)):  # Check every 100ms
-        ...
-```
-
-**Both sides must match.** If only the MCP server timeout is increased, the plugin's command queue will still time out at 30s. If only the plugin timeout is increased, the HTTP request from the MCP server will time out first.
-
-## Configuration
-
-| Setting | Default | How to Change |
-|---------|---------|---------------|
-| Plugin HTTP port | `5678` | Edit `SERVER_PORT` in plugin `__init__.py` |
-| MCP server URL | `http://localhost:5678` | Set `KRITA_URL` env var |
-| Canvas output dir | `~/krita-mcp-output` | Edit `CANVAS_OUTPUT_DIR` in plugin `__init__.py` |
-
-## Painting Approach
-
-The plugin paints using **direct pixel manipulation** (not Krita's native brush engine for strokes). This means:
-
-- Strokes use a custom soft-circle renderer with configurable hardness
-- Alpha blending is done manually in BGRA pixel format
-- Shapes (rectangle, ellipse, line) are rasterized directly
-- This approach is reliable and doesn't depend on Krita's internal brush state
-
-The `set_brush` tool does set Krita's brush preset (for potential future use), but `stroke` currently uses its own pixel-level rendering.
-
-## License
-
+## 📄 License
 MIT

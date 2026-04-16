@@ -1,6 +1,6 @@
 [project]
 name = "krita-cli"
-version = "0.1.0"
+version = "1.0.0"
 description = "SOTA CLI + MCP server for programmatic painting in Krita"
 readme = "README.md"
 license = "MIT"
@@ -8,14 +8,15 @@ requires-python = ">=3.12"
 authors = [
     { name = "Krita MCP Contributors" },
 ]
-keywords = ["krita", "mcp", "cli", "painting", "ai", "automation"]
+keywords = ["krita", "mcp", "cli", "painting", "ai", "automation", "claude", "fastmcp"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Topic :: Multimedia :: Graphics :: Editors :: Raster-Based",
     "Typing :: Typed",
 ]
 
@@ -29,9 +30,10 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/krita-cli"
-Repository = "https://github.com/yourusername/krita-cli"
-Issues = "https://github.com/yourusername/krita-cli/issues"
+Homepage = "https://github.com/github/krita-cli"
+Repository = "https://github.com/github/krita-cli"
+Issues = "https://github.com/github/krita-cli/issues"
+Changelog = "https://github.com/github/krita-cli/blob/master/CHANGELOG.md"
 
 [project.scripts]
 krita = "krita_cli.cli:app"

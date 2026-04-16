@@ -264,4 +264,54 @@ def test_krita_list_tools_success() -> None:
     result = server_module.krita_list_tools()
     assert "krita_stroke" in result
     assert "krita_select_rect" in result
-    assert "32 total" in result
+    assert "40 total" in result
+
+
+def test_krita_get_canvas_info_full() -> None:
+    with patch("krita_mcp.server._get_client") as mock_get:
+        mock_client = MagicMock()
+        mock_client.get_canvas_info.return_value = {
+            "status": "ok",
+            "name": "test.kra",
+            "width": 1000,
+            "height": 1000,
+            "color_model": "RGBA",
+            "color_depth": "U8",
+        }
+        mock_get.return_value = mock_client
+        result = server_module.krita_get_canvas_info()
+        assert "name=test.kra" in result
+        assert "width=1000" in result
+        assert "height=1000" in result
+        assert "color_model=RGBA" in result
+        assert "color_depth=U8" in result
+
+
+def test_krita_get_current_color_full() -> None:
+    with patch("krita_mcp.server._get_client") as mock_get:
+        mock_client = MagicMock()
+        mock_client.get_current_color.return_value = {
+            "status": "ok",
+            "foreground": "#ff0000",
+            "background": "#000000",
+        }
+        mock_get.return_value = mock_client
+        result = server_module.krita_get_current_color()
+        assert "foreground: #ff0000" in result
+        assert "background: #000000" in result
+
+
+def test_krita_get_current_brush_full() -> None:
+    with patch("krita_mcp.server._get_client") as mock_get:
+        mock_client = MagicMock()
+        mock_client.get_current_brush.return_value = {
+            "status": "ok",
+            "preset": "Soft",
+            "size": 50.0,
+            "opacity": 1.0,
+        }
+        mock_get.return_value = mock_client
+        result = server_module.krita_get_current_brush()
+        assert "preset=Soft" in result
+        assert "size=50.0" in result
+        assert "opacity=1.0" in result
