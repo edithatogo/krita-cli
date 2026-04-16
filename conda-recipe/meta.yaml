@@ -1,0 +1,48 @@
+﻿{% set name = 'krita-cli' %}
+{% set version = '1.0.0' %}
+
+package:
+  name: {{ name|lower }}
+  version: {{ version }}
+
+source:
+  path: ..
+
+build:
+  number: 0
+  script: {{ PYTHON }} -m pip install . --no-deps -vv
+  entry_points:
+    - krita = krita_cli.cli:app
+
+requirements:
+  host:
+    - python >=3.12
+    - pip
+    - hatchling
+  run:
+    - python >=3.12
+    - fastmcp >=3.2.0
+    - httpx >=0.28.1
+    - pydantic >=2.12.5
+    - pydantic-settings >=2.13.1
+    - rich >=14.3.3
+    - typer >=0.24.1
+
+test:
+  commands:
+    - krita --help
+
+about:
+  home: https://github.com/edithatogo/krita-cli
+  license: MIT
+  license_file: LICENSE
+  summary: SOTA CLI + MCP server for programmatic painting in Krita
+  description: |
+    Krita CLI provides a bridge between AI agents, developers, and the Krita desktop application.
+    It enables real-time painting, canvas manipulation, and workflow automation.
+  dev_url: https://github.com/edithatogo/krita-cli
+  doc_url: https://github.com/edithatogo/krita-cli
+
+extra:
+  recipe-maintainers:
+    - edithatogo
