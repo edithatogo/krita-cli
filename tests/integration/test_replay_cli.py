@@ -69,7 +69,6 @@ def test_replay_with_errors(mock_client, tmp_path) -> None:
             raise KritaError(msg)
         return {"status": "ok"}
 
-
     mock_client.send_command.side_effect = mock_send
 
     result = runner.invoke(app, ["replay", str(history_file), "--speed", "0"])

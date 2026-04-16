@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any, cast
 
 import typer
 from rich.console import Console
@@ -53,8 +53,13 @@ def batch(
         client = _shared._get_client(ctx)
         result = client.batch_execute(commands, stop_on_error=stop_on_error)
         status = result.get("status", "unknown")
-        ok = sum(1 for r in result.get("results", []) if r.get("status") == "ok")
-        errs = sum(1 for r in result.get("results", []) if r.get("status") == "error")
+        results_raw = result.get("results", [])
+        if not isinstance(results_raw, list):
+            results_raw = []
+        results = cast(list[dict[str, Any]], results_raw)
+        
+        ok = sum(1 for r in results if r.get("status") == "ok")
+        errs = sum(1 for r in results if r.get("status") == "error")
         count = result.get("count", 0)
         color = "green" if status == "ok" else "red" if status == "error" else "yellow"
         console.print(f"[{color}]Batch: {status}[/{color}]")
@@ -64,7 +69,7 @@ def batch(
             console.print(f"  Batch ID: [dim]{batch_id}[/dim]")
         if errs > 0:
             console.print("[red]Errors:[/red]")
-            for r in result.get("results", []):
+            for r in results:
                 if r.get("status") == "error":
                     err_msg = r.get("error")
                     if not err_msg:
@@ -76,6 +81,6 @@ def batch(
                             )
                     if not err_msg:
                         err_msg = "unknown"
-                    console.print(f"  [red]✗ {r['action']}: {err_msg}[/red]")
+                    console.print(f"  [red]✗ {r.get('action', 'unknown')}: {err_msg}[/red]")
     except KritaError as exc:
         _shared._handle_error(exc)

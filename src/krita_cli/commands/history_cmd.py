@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from typing import Annotated
+from typing import Annotated, Any, cast
 
 import typer
 from rich.console import Console
@@ -33,7 +33,11 @@ def history(
             console.print(json.dumps(result, indent=2, default=str))
             return
 
-        records = result.get("history", [])
+        records_raw = result.get("history", [])
+        if not isinstance(records_raw, list):
+            records_raw = []
+        records = cast(list[dict[str, Any]], records_raw)
+        
         if not records:
             console.print("[dim]No command history recorded.[/dim]")
             return

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Any, cast
 
 import typer
 from rich.console import Console
@@ -116,7 +116,10 @@ def selection_info(ctx: Context) -> None:
     with _shared._handle_errors():
         result = client.selection_info()
         if result.get("has_selection"):
-            bounds = result.get("bounds", {})
+            bounds_raw = result.get("bounds", {})
+            if not isinstance(bounds_raw, dict):
+                bounds_raw = {}
+            bounds = cast(dict[str, Any], bounds_raw)
             console.print(
                 f"[green]Active selection:[/green] x={bounds.get('x')}, y={bounds.get('y')}, "
                 f"w={bounds.get('width')}, h={bounds.get('height')}"
@@ -253,7 +256,11 @@ def selection_stats(ctx: Context) -> None:
     with _shared._handle_errors():
         result = client.selection_stats()
         count = result.get("pixel_count", 0)
-        bbox = result.get("bounding_box", {})
+        bbox_raw = result.get("bounding_box", {})
+        if not isinstance(bbox_raw, dict):
+            bbox_raw = {}
+        bbox = cast(dict[str, Any], bbox_raw)
+        
         console.print("[green]Selection Statistics:[/green]")
         console.print(f"  Pixel count: [bold]{count}[/bold]")
         if bbox:
@@ -261,12 +268,17 @@ def selection_stats(ctx: Context) -> None:
                 f"  Bounding box: x={bbox.get('x', '?')}, y={bbox.get('y', '?')}, "
                 f"w={bbox.get('width', '?')}, h={bbox.get('height', '?')}"
             )
-        centroid = result.get("centroid", {})
+        centroid_raw = result.get("centroid", {})
+        if not isinstance(centroid_raw, dict):
+            centroid_raw = {}
+        centroid = cast(dict[str, Any], centroid_raw)
+        
         if centroid:
             console.print(f"  Centroid: ({centroid.get('x', '?')}, {centroid.get('y', '?')})")
         area_pct = result.get("area_percentage")
         if area_pct is not None:
-            console.print(f"  Area: {area_pct:.1f}% of canvas")
+            pct = float(cast(Any, area_pct))
+            console.print(f"  Area: {pct:.1f}% of canvas")
 
 
 @app.command("save-channel")
@@ -299,14 +311,18 @@ def list_channels(ctx: Context) -> None:
     client = _shared._get_client(ctx)
     with _shared._handle_errors():
         result = client.list_selection_channels()
-        channels = result.get("channels", [])
+        channels_raw = result.get("channels", [])
+        if not isinstance(channels_raw, list):
+            channels_raw = []
+        channels = cast(list[dict[str, Any]], channels_raw)
+        
         count = result.get("count", 0)
         if count == 0:
             console.print("[dim]No saved selection channels[/dim]")
         else:
             console.print(f"[green]Selection Channels ({count}):[/green]")
             for ch in channels:
-                console.print(f"  - [bold]{ch['name']}[/bold]")
+                console.print(f"  - [bold]{ch.get('name', '?')}[/bold]")
 
 
 @app.command("delete-channel")
@@ -327,12 +343,20 @@ def security_status(ctx: Context) -> None:
     client = _shared._get_client(ctx)
     with _shared._handle_errors():
         result = client.get_security_status()
-        rl = result.get("rate_limit", {})
+        rl_raw = result.get("rate_limit", {})
+        if not isinstance(rl_raw, dict):
+            rl_raw = {}
+        rl = cast(dict[str, Any], rl_raw)
+        
+        payload_limit = result.get("payload_limit", 0)
+        if not (isinstance(payload_limit, int) or isinstance(payload_limit, float)):
+            payload_limit = 0
+            
         console.print("[green]Security Status:[/green]")
         console.print(
             f"  Rate limit: [dim]{rl.get('current_usage', 0)}/{rl.get('max_commands_per_minute', '?')} per minute[/dim]"
         )
-        console.print(f"  Payload limit: [dim]{result.get('payload_limit', 0) / (1024 * 1024):.0f}MB[/dim]")
+        console.print(f"  Payload limit: [dim]{float(payload_limit) / (1024 * 1024):.0f}MB[/dim]")
         console.print(f"  Batch limit: [dim]{result.get('batch_size_limit', '?')} commands[/dim]")
         console.print(
             f"  Max canvas: [dim]{result.get('max_canvas_dim', '?')}x{result.get('max_canvas_dim', '?')}[/dim]"

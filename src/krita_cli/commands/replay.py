@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import pathlib
 import time
-from typing import Annotated
+from typing import Annotated, Any, cast
 
 import typer
 from rich.console import Console
@@ -56,9 +56,12 @@ def _execute_replay(
         try:
             result = client.send_command(action, params)
             if "error" in result:
-                err_msg = result.get("error", {})
-                if isinstance(err_msg, dict):
-                    err_msg = err_msg.get("message", str(err_msg))
+                err_raw = result.get("error", {})
+                if isinstance(err_raw, dict):
+                    err_dict = cast(dict[str, Any], err_raw)
+                    err_msg = str(err_dict.get("message", str(err_raw)))
+                else:
+                    err_msg = str(err_raw)
                 console.print(f"  [red]#{i}: {action} — {err_msg}[/red]")
                 err_count += 1
             else:

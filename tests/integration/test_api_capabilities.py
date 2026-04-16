@@ -114,8 +114,7 @@ class TestAPICapabilityDetection:
                 "bounds": None,
                 "supported": False,
                 "message": (
-                    "selection_bounds API is not available in this Krita version. "
-                    "Upgrade to get selection bounds info."
+                    "selection_bounds API is not available in this Krita version. Upgrade to get selection bounds info."
                 ),
             }
         )
