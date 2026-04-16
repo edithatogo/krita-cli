@@ -176,3 +176,11 @@ def test_module_functions() -> None:
     assert len(results) == 1
     
     assert history_mod.get_system_log_path().name == "history.log"
+
+
+def test_systemic_logging_exception() -> None:
+    from krita_cli.history import CommandHistory
+    with patch("krita_cli.history.json.dumps", side_effect=Exception("JSON error")):
+        history = CommandHistory()
+        # Should not raise
+        history.record_command("test", {}, {"status": "ok"})
