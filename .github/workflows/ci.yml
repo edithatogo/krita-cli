@@ -104,6 +104,7 @@ jobs:
         with:
           auto-update-conda: true
           python-version: 3.12
+          channels: conda-forge,defaults
       - name: Build and Upload to Anaconda
         shell: bash -l {0}
         run: |
