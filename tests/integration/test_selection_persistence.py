@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
-import pytest
-import pytest_httpx
+from typing import TYPE_CHECKING
 
-from krita_client import KritaClient, ClientConfig
+from krita_client import ClientConfig, KritaClient
+
+if TYPE_CHECKING:
+    import pytest_httpx
 
 
 class TestSaveSelection:
@@ -13,9 +15,7 @@ class TestSaveSelection:
 
     def test_save_selection_defaults(self, httpx_mock: pytest_httpx.HTTPXMock) -> None:
         """Save selection with default format."""
-        httpx_mock.add_response(
-            json={"status": "ok", "path": "/tmp/sel.png", "format": "png", "pixel_count": 5000}
-        )
+        httpx_mock.add_response(json={"status": "ok", "path": "/tmp/sel.png", "format": "png", "pixel_count": 5000})
 
         client = KritaClient(config=ClientConfig())
         result = client.save_selection(path="/tmp/sel.png")
@@ -24,9 +24,7 @@ class TestSaveSelection:
 
     def test_save_selection_custom_format(self, httpx_mock: pytest_httpx.HTTPXMock) -> None:
         """Save selection with custom format."""
-        httpx_mock.add_response(
-            json={"status": "ok", "path": "/tmp/sel.bmp", "format": "bmp", "pixel_count": 5000}
-        )
+        httpx_mock.add_response(json={"status": "ok", "path": "/tmp/sel.bmp", "format": "bmp", "pixel_count": 5000})
 
         client = KritaClient(config=ClientConfig())
         result = client.save_selection(path="/tmp/sel.bmp", format="bmp")
@@ -39,9 +37,7 @@ class TestLoadSelection:
 
     def test_load_selection(self, httpx_mock: pytest_httpx.HTTPXMock) -> None:
         """Load selection from file."""
-        httpx_mock.add_response(
-            json={"status": "ok", "path": "/tmp/sel.png", "loaded_pixels": 3000}
-        )
+        httpx_mock.add_response(json={"status": "ok", "path": "/tmp/sel.png", "loaded_pixels": 3000})
 
         client = KritaClient(config=ClientConfig())
         result = client.load_selection(path="/tmp/sel.png")
@@ -74,9 +70,7 @@ class TestSelectionStats:
 
     def test_selection_stats_no_selection(self, httpx_mock: pytest_httpx.HTTPXMock) -> None:
         """Get stats with no selection."""
-        httpx_mock.add_response(
-            json={"status": "ok", "has_selection": False, "pixel_count": 0}
-        )
+        httpx_mock.add_response(json={"status": "ok", "has_selection": False, "pixel_count": 0})
 
         client = KritaClient(config=ClientConfig())
         result = client.selection_stats()

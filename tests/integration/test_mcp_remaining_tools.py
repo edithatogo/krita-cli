@@ -69,7 +69,7 @@ def test_krita_batch_with_error(mock_client) -> None:
     mock_client.batch_execute.return_value = {
         "status": "partial",
         "results": [{"action": "undo", "status": "error", "error": "failed"}],
-        "batch_id": "b123"
+        "batch_id": "b123",
     }
     result = server.krita_batch(commands=[{"action": "undo"}])
     assert "1 failed" in result
@@ -80,13 +80,7 @@ def test_krita_batch_with_error(mock_client) -> None:
 def test_krita_batch_nested_error(mock_client) -> None:
     mock_client.batch_execute.return_value = {
         "status": "partial",
-        "results": [
-            {
-                "action": "undo",
-                "status": "error",
-                "result": {"error": {"message": "nested failure"}}
-            }
-        ]
+        "results": [{"action": "undo", "status": "error", "result": {"error": {"message": "nested failure"}}}],
     }
     result = server.krita_batch(commands=[{"action": "undo"}])
     assert "nested failure" in result
@@ -95,13 +89,7 @@ def test_krita_batch_nested_error(mock_client) -> None:
 def test_krita_batch_nested_error_string(mock_client) -> None:
     mock_client.batch_execute.return_value = {
         "status": "partial",
-        "results": [
-            {
-                "action": "undo",
-                "status": "error",
-                "result": {"error": "string error"}
-            }
-        ]
+        "results": [{"action": "undo", "status": "error", "result": {"error": "string error"}}],
     }
     result = server.krita_batch(commands=[{"action": "undo"}])
     assert "string error" in result
@@ -116,7 +104,7 @@ def test_krita_rollback(mock_client) -> None:
 def test_krita_get_command_history(mock_client) -> None:
     mock_client.get_command_history.return_value = {
         "status": "ok",
-        "history": [{"action": "undo", "status": "ok", "duration_ms": 5.0}]
+        "history": [{"action": "undo", "status": "ok", "duration_ms": 5.0}],
     }
     result = server.krita_get_command_history()
     assert "Command History (1 entries)" in result
@@ -150,9 +138,9 @@ def test_krita_security_status(mock_client) -> None:
     mock_client.get_security_status.return_value = {
         "status": "ok",
         "rate_limit": {"current_usage": 0, "max_commands_per_minute": 60},
-        "payload_limit": 1024*1024,
+        "payload_limit": 1024 * 1024,
         "batch_size_limit": 100,
-        "max_canvas_dim": 8192
+        "max_canvas_dim": 8192,
     }
     result = server.krita_security_status()
     assert "Security status" in result

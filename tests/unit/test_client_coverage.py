@@ -158,6 +158,7 @@ def test_get_security_status(client) -> None:
 
 def test_send_http_error(client) -> None:
     import httpx
+
     with patch.object(client._client, "post") as mock_post:
         mock_resp = MagicMock()
         mock_resp.status_code = 500
@@ -166,21 +167,20 @@ def test_send_http_error(client) -> None:
         # No, the code checks status_code? No, it catches HTTPStatusError.
         # But HTTPStatusError is usually raised by response.raise_for_status().
         # Wait, the code doesn't call raise_for_status()!
-        
+
         # Let's check _send again.
         # It has:
         # response = self._client.post(...)
         # data = response.json()
-        
+
         # So it ONLY raises HTTPStatusError if something ELSE raises it.
         # Wait, httpx.Client.post DOES NOT raise HTTPStatusError unless you use a hook.
-        
+
         # Ah, I see. I'll make the mock raise it.
-        mock_post.side_effect = httpx.HTTPStatusError(
-            "error", request=MagicMock(), response=mock_resp
-        )
-        
+        mock_post.side_effect = httpx.HTTPStatusError("error", request=MagicMock(), response=mock_resp)
+
         from krita_client import KritaError
+
         with pytest.raises(KritaError) as exc_info:
             client._send("test", {})
         assert "HTTP 500" in exc_info.value.message
@@ -233,8 +233,9 @@ def test_health_protocol_mismatch_int(client) -> None:
         mock_resp = MagicMock()
         mock_resp.json.return_value = {"status": "ok", "protocol_version": 999}
         mock_get.return_value = mock_resp
-        
+
         from krita_client import KritaConnectionError
+
         with pytest.raises(KritaConnectionError) as exc_info:
             client.health()
         assert "upgrade krita-cli" in exc_info.value.message
@@ -245,8 +246,9 @@ def test_health_protocol_mismatch_str(client) -> None:
         mock_resp = MagicMock()
         mock_resp.json.return_value = {"status": "ok", "protocol_version": "9.9.9"}
         mock_get.return_value = mock_resp
-        
+
         from krita_client import KritaConnectionError
+
         with pytest.raises(KritaConnectionError) as exc_info:
             client.health()
         assert "Incompatible protocol version" in exc_info.value.message
@@ -254,10 +256,12 @@ def test_health_protocol_mismatch_str(client) -> None:
 
 def test_health_connect_error(client) -> None:
     import httpx
+
     with patch.object(client._client, "get") as mock_get:
         mock_get.side_effect = httpx.ConnectError("refused")
-        
+
         from krita_client import KritaConnectionError
+
         with pytest.raises(KritaConnectionError) as exc_info:
             client.health()
         assert "Cannot connect" in exc_info.value.message

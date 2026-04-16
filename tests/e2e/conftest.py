@@ -9,18 +9,21 @@ from __future__ import annotations
 import json
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from typing import Any, Generator
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import pytest
 
-from krita_client import KritaClient, ClientConfig
+from krita_client import ClientConfig, KritaClient
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 
 class MockKritaPluginHandler(BaseHTTPRequestHandler):
     """Mock HTTP handler that simulates Krita plugin responses."""
 
     # Class-level state shared across requests
-    _state: dict[str, Any] = {
+    _state: ClassVar[dict[str, Any]] = {
         "canvas_created": False,
         "canvas_width": 0,
         "canvas_height": 0,
@@ -48,22 +51,24 @@ class MockKritaPluginHandler(BaseHTTPRequestHandler):
         # Suppress log output during tests
         pass
 
-    def do_GET(self) -> None:  # noqa: N802
+    def do_GET(self) -> None:
         if self.path == "/health":
-            self._send_json({
-                "status": "ok",
-                "plugin": "kritamcp",
-                "protocol_version": "1.0.0",
-                "capabilities": {
-                    "select_ellipse": True,
-                    "select_polygon": True,
-                    "selection_bounds": True,
-                },
-            })
+            self._send_json(
+                {
+                    "status": "ok",
+                    "plugin": "kritamcp",
+                    "protocol_version": "1.0.0",
+                    "capabilities": {
+                        "select_ellipse": True,
+                        "select_polygon": True,
+                        "selection_bounds": True,
+                    },
+                }
+            )
         else:
             self._send_json({"error": "Unknown GET path"}, 404)
 
-    def do_POST(self) -> None:  # noqa: N802
+    def do_POST(self) -> None:
         content_length = int(self.headers.get("Content-Length", 0))
         body = self.rfile.read(content_length)
         try:
@@ -153,7 +158,13 @@ class MockKritaPluginHandler(BaseHTTPRequestHandler):
             # Clear redo stack when new action is performed
             self._state.setdefault("redo_stack", []).clear()
         self._state["selection"] = {"type": "rect", "params": params}
-        return {"status": "ok", "x": params["x"], "y": params["y"], "width": params["width"], "height": params["height"]}
+        return {
+            "status": "ok",
+            "x": params["x"],
+            "y": params["y"],
+            "width": params["width"],
+            "height": params["height"],
+        }
 
     def _cmd_select_ellipse(self, params: dict[str, Any]) -> dict[str, Any]:
         self._state["selection"] = {"type": "ellipse", "params": params}
@@ -244,11 +255,11 @@ class MockKritaPluginHandler(BaseHTTPRequestHandler):
         contiguous = params.get("contiguous", True)
         x = params.get("x")
         y = params.get("y")
-        
+
         method = "contiguous" if contiguous else "global"
         # Mock selected count based on tolerance
         selected_count = int(1000 * (1.0 - tolerance))
-        
+
         result: dict[str, object] = {
             "status": "ok",
             "selected_count": selected_count,
@@ -258,7 +269,7 @@ class MockKritaPluginHandler(BaseHTTPRequestHandler):
         if x is not None and y is not None:
             result["x"] = x
             result["y"] = y
-        
+
         # Set selection state
         self._state["selection"] = {
             "type": "color",
@@ -271,18 +282,18 @@ class MockKritaPluginHandler(BaseHTTPRequestHandler):
         """Mock select by alpha selection."""
         min_alpha = params.get("min_alpha", 1)
         max_alpha = params.get("max_alpha", 255)
-        
+
         # Mock selected count based on alpha range
         range_size = max_alpha - min_alpha
         selected_count = int(5000 * (range_size / 255.0))
-        
+
         result: dict[str, object] = {
             "status": "ok",
             "selected_count": selected_count,
             "min_alpha": min_alpha,
             "max_alpha": max_alpha,
         }
-        
+
         # Set selection state
         self._state["selection"] = {
             "type": "alpha",
@@ -298,7 +309,7 @@ class MockKritaPluginHandler(BaseHTTPRequestHandler):
         self.wfile.write(json.dumps(data).encode())
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_plugin_server() -> Generator[HTTPServer, None, None]:
     """Start a mock Krita plugin HTTP server for E2E testing."""
     MockKritaPluginHandler.reset_state()
@@ -309,7 +320,7 @@ def mock_plugin_server() -> Generator[HTTPServer, None, None]:
     server.shutdown()
 
 
-@pytest.fixture()
+@pytest.fixture
 def e2e_client(mock_plugin_server: HTTPServer) -> KritaClient:
     """Create a KritaClient connected to the mock plugin server."""
     port = mock_plugin_server.server_address[1]

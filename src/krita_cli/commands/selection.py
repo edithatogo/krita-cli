@@ -117,8 +117,10 @@ def selection_info(ctx: Context) -> None:
         result = client.selection_info()
         if result.get("has_selection"):
             bounds = result.get("bounds", {})
-            console.print(f"[green]Active selection:[/green] x={bounds.get('x')}, y={bounds.get('y')}, "
-                          f"w={bounds.get('width')}, h={bounds.get('height')}")
+            console.print(
+                f"[green]Active selection:[/green] x={bounds.get('x')}, y={bounds.get('y')}, "
+                f"w={bounds.get('width')}, h={bounds.get('height')}"
+            )
         else:
             console.print("[dim]No active selection[/dim]")
 
@@ -135,10 +137,15 @@ def deselect(ctx: Context) -> None:
 @app.command("select-by-color")
 def select_by_color(
     ctx: Context,
+    *,
     x: Annotated[int | None, typer.Option("--x", "-x", help="X coordinate for magic wand (omit for global)")] = None,
     y: Annotated[int | None, typer.Option("--y", "-y", help="Y coordinate for magic wand (omit for global)")] = None,
-    tolerance: Annotated[float, typer.Option("--tolerance", "-t", help="Color tolerance (0.0-1.0)", min=0.0, max=1.0)] = 0.1,
-    contiguous: Annotated[bool, typer.Option("--contiguous/--global", "-c/-g", help="Contiguous (magic wand) or global selection")] = True,
+    tolerance: Annotated[
+        float, typer.Option("--tolerance", "-t", help="Color tolerance (0.0-1.0)", min=0.0, max=1.0)
+    ] = 0.1,
+    contiguous: Annotated[
+        bool, typer.Option("--contiguous/--global", "-c/-g", help="Contiguous (magic wand) or global selection")
+    ] = True,
 ) -> None:
     """Select pixels by color similarity (magic wand or global)."""
     client = _shared._get_client(ctx)
@@ -250,8 +257,10 @@ def selection_stats(ctx: Context) -> None:
         console.print("[green]Selection Statistics:[/green]")
         console.print(f"  Pixel count: [bold]{count}[/bold]")
         if bbox:
-            console.print(f"  Bounding box: x={bbox.get('x', '?')}, y={bbox.get('y', '?')}, "
-                         f"w={bbox.get('width', '?')}, h={bbox.get('height', '?')}")
+            console.print(
+                f"  Bounding box: x={bbox.get('x', '?')}, y={bbox.get('y', '?')}, "
+                f"w={bbox.get('width', '?')}, h={bbox.get('height', '?')}"
+            )
         centroid = result.get("centroid", {})
         if centroid:
             console.print(f"  Centroid: ({centroid.get('x', '?')}, {centroid.get('y', '?')})")
@@ -321,20 +330,11 @@ def security_status(ctx: Context) -> None:
         rl = result.get("rate_limit", {})
         console.print("[green]Security Status:[/green]")
         console.print(
-            f"  Rate limit: [dim]{rl.get('current_usage', 0)}/"
-            f"{rl.get('max_commands_per_minute', '?')} per minute[/dim]"
+            f"  Rate limit: [dim]{rl.get('current_usage', 0)}/{rl.get('max_commands_per_minute', '?')} per minute[/dim]"
         )
+        console.print(f"  Payload limit: [dim]{result.get('payload_limit', 0) / (1024 * 1024):.0f}MB[/dim]")
+        console.print(f"  Batch limit: [dim]{result.get('batch_size_limit', '?')} commands[/dim]")
         console.print(
-            f"  Payload limit: [dim]"
-            f"{result.get('payload_limit', 0) / (1024*1024):.0f}MB[/dim]"
-        )
-        console.print(
-            f"  Batch limit: [dim]"
-            f"{result.get('batch_size_limit', '?')} commands[/dim]"
-        )
-        console.print(
-            f"  Max canvas: [dim]"
-            f"{result.get('max_canvas_dim', '?')}x"
-            f"{result.get('max_canvas_dim', '?')}[/dim]"
+            f"  Max canvas: [dim]{result.get('max_canvas_dim', '?')}x{result.get('max_canvas_dim', '?')}[/dim]"
         )
         console.print(f"  Max layers: [dim]{result.get('max_layers', '?')}[/dim]")

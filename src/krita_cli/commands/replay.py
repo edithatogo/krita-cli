@@ -67,10 +67,7 @@ def _execute_replay(
             console.print(f"  [red]#{i}: {action} — {exc}[/red]")
             err_count += 1
 
-    console.print(
-        f"\nReplay complete: {ok_count} succeeded,"
-        f" {err_count} failed out of {len(records)}"
-    )
+    console.print(f"\nReplay complete: {ok_count} succeeded, {err_count} failed out of {len(records)}")
 
 
 @app.command()

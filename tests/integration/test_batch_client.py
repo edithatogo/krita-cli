@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import json
+from typing import TYPE_CHECKING
 
 import pytest
-from pytest_httpx import HTTPXMock
 
 from krita_client.client import KritaClient
+
+if TYPE_CHECKING:
+    from pytest_httpx import HTTPXMock
 
 
 def test_batch_execute_success(httpx_mock: HTTPXMock) -> None:

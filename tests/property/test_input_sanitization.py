@@ -173,9 +173,7 @@ class TestSelectAreaValidation:
         st.integers(min_value=1, max_value=8192),
     )
     @settings(max_examples=30)
-    def test_valid_selection_area(
-        self, x: int, y: int, width: int, height: int
-    ) -> None:
+    def test_valid_selection_area(self, x: int, y: int, width: int, height: int) -> None:
         """Valid selection parameters should create valid models."""
         params = SelectRectParams(x=x, y=y, width=width, height=height)
         assert params.x == x

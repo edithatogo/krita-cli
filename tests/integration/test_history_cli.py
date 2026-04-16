@@ -23,9 +23,7 @@ def mock_client():
 def test_history_list(mock_client) -> None:
     mock_client.get_command_history.return_value = {
         "status": "ok",
-        "history": [
-            {"action": "set_color", "status": "ok", "duration_ms": 10.5, "error": None}
-        ],
+        "history": [{"action": "set_color", "status": "ok", "duration_ms": 10.5, "error": None}],
         "count": 1,
     }
     result = runner.invoke(app, ["history", "--limit", "10"])

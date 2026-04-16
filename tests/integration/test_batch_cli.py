@@ -88,7 +88,7 @@ def test_cli_batch_partial_error(tmp_path) -> None:
                 {"action": "invalid", "status": "error", "error": "Unknown action"},
             ],
             "count": 1,
-            "batch_id": "b123"
+            "batch_id": "b123",
         }
         mock_get.return_value = mock_client
 

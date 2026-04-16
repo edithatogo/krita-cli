@@ -56,9 +56,7 @@ def test_mcp_rollback_not_found() -> None:
     with patch("krita_mcp.server._get_client") as mock_get_client:
         mock_client = MagicMock()
         mock_client.rollback.side_effect = KritaCommandError(
-            message="Batch not found",
-            code="BATCH_NOT_FOUND",
-            recoverable=True
+            message="Batch not found", code="BATCH_NOT_FOUND", recoverable=True
         )
         mock_get_client.return_value = mock_client
 

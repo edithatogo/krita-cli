@@ -5,8 +5,6 @@ from __future__ import annotations
 import importlib.util
 from pathlib import Path
 
-import pytest
-
 # Import payload_validator from plugin directory (not a pip package)
 _payload_path = Path(__file__).parent.parent.parent / "krita-plugin" / "kritamcp" / "payload_validator.py"
 _spec = importlib.util.spec_from_file_location("payload_validator", _payload_path)

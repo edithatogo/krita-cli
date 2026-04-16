@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import json
+from typing import TYPE_CHECKING
 
-import pytest
-import pytest_httpx
+from krita_client import ClientConfig, KritaClient
 
-from krita_client import KritaClient, ClientConfig
+if TYPE_CHECKING:
+    import pytest_httpx
 
 
 class TestAPICapabilityDetection:
@@ -73,7 +73,10 @@ class TestAPICapabilityDetection:
             json={
                 "status": "error",
                 "supported": False,
-                "message": "select_ellipse API is not available in this Krita version. Please upgrade Krita or use select_rect instead.",
+                "message": (
+                    "select_ellipse API is not available in this Krita version. "
+                    "Please upgrade Krita or use select_rect instead."
+                ),
             }
         )
 
@@ -89,7 +92,10 @@ class TestAPICapabilityDetection:
             json={
                 "status": "error",
                 "supported": False,
-                "message": "select_polygon API is not available in this Krita version. Please upgrade Krita or use select_rect instead.",
+                "message": (
+                    "select_polygon API is not available in this Krita version. "
+                    "Please upgrade Krita or use select_rect instead."
+                ),
             }
         )
 
@@ -107,7 +113,10 @@ class TestAPICapabilityDetection:
                 "has_selection": True,
                 "bounds": None,
                 "supported": False,
-                "message": "selection_bounds API is not available in this Krita version. Upgrade to get selection bounds info.",
+                "message": (
+                    "selection_bounds API is not available in this Krita version. "
+                    "Upgrade to get selection bounds info."
+                ),
             }
         )
 

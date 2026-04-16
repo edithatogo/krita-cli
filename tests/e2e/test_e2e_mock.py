@@ -6,9 +6,10 @@ without requiring a real Krita instance. They run in CI by default.
 
 from __future__ import annotations
 
-import json
+from typing import TYPE_CHECKING
 
-from krita_client import KritaClient
+if TYPE_CHECKING:
+    from krita_client import KritaClient
 
 
 class TestE2EHealth:
@@ -154,17 +155,17 @@ class TestE2ESelectionUndoRedo:
         """Redo should reapply selection operation after undo."""
         # Create selection
         e2e_client.select_rect(x=0, y=0, width=100, height=100)
-        
+
         # Clear selection
         e2e_client.deselect()
         info_after_clear = e2e_client.selection_info()
         assert info_after_clear["has_selection"] is False
-        
+
         # Undo to restore selection
         result = e2e_client.undo()
         assert result["status"] == "ok"
         assert result.get("undone") is True
-        
+
         info_after_undo = e2e_client.selection_info()
         assert info_after_undo["has_selection"] is True
 

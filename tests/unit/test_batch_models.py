@@ -30,10 +30,7 @@ def test_batch_request_empty() -> None:
 
 
 def test_batch_request_with_stop_on_error() -> None:
-    req = BatchRequest(
-        commands=[BatchCommand(action="undo")],
-        stop_on_error=True
-    )
+    req = BatchRequest(commands=[BatchCommand(action="undo")], stop_on_error=True)
     assert req.stop_on_error is True
 
 
@@ -57,7 +54,7 @@ def test_batch_response_ok() -> None:
         results=[
             BatchCommandResult(action="set_color", status="ok", result={"status": "ok"}),
         ],
-        count=1
+        count=1,
     )
     assert res.status == "ok"
     assert len(res.results) == 1
@@ -71,7 +68,7 @@ def test_batch_response_partial() -> None:
             BatchCommandResult(action="set_color", status="ok", result={"status": "ok"}),
             BatchCommandResult(action="stroke", status="error", error="No active layer"),
         ],
-        count=2
+        count=2,
     )
     assert res.status == "partial"
     assert len(res.results) == 2

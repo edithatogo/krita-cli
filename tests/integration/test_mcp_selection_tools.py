@@ -39,7 +39,10 @@ def test_krita_select_polygon(mock_client) -> None:
 
 
 def test_krita_selection_info(mock_client) -> None:
-    mock_client.selection_info.return_value = {"has_selection": True, "bounds": {"x": 10, "y": 10, "width": 5, "height": 5}}
+    mock_client.selection_info.return_value = {
+        "has_selection": True,
+        "bounds": {"x": 10, "y": 10, "width": 5, "height": 5},
+    }
     result = server.krita_selection_info()
     assert "Selection: x=10" in result
 
@@ -119,7 +122,11 @@ def test_krita_load_selection(mock_client) -> None:
 
 
 def test_krita_selection_stats(mock_client) -> None:
-    mock_client.selection_stats.return_value = {"status": "ok", "pixel_count": 100, "bounding_box": {"width": 10, "height": 10}}
+    mock_client.selection_stats.return_value = {
+        "status": "ok",
+        "pixel_count": 100,
+        "bounding_box": {"width": 10, "height": 10},
+    }
     result = server.krita_selection_stats()
     assert "Pixel count: 100" in result
 

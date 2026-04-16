@@ -6,8 +6,8 @@ import pytest
 from pydantic import ValidationError
 
 from krita_client.models import (
-    SaveSelectionParams,
     LoadSelectionParams,
+    SaveSelectionParams,
     SelectionChannelParams,
     SelectionStatsParams,
 )
@@ -61,5 +61,5 @@ class TestSelectionStatsParams:
 
     def test_empty_params(self) -> None:
         """Stats params should be empty."""
-        params = SelectionStatsParams()
+        SelectionStatsParams()
         assert True  # Just verify it instantiates

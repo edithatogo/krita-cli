@@ -6,8 +6,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from krita_client import KritaConnectionError, KritaError
 from krita_mcp import server
-from krita_client import KritaError, KritaConnectionError
 
 
 @pytest.fixture
@@ -50,7 +50,7 @@ def test_krita_set_brush_error(mock_client) -> None:
 
 def test_krita_stroke_error(mock_client) -> None:
     mock_client.stroke.return_value = {"error": "out of bounds"}
-    result = server.krita_stroke(points=[[0,0], [1,1]])
+    result = server.krita_stroke(points=[[0, 0], [1, 1]])
     assert "Error: out of bounds" in result
 
 

@@ -558,7 +558,7 @@ class KritaClient:
         self,
         path: str,
         *,
-        format: str = "png",
+        format: str = "png",  # noqa: A002
     ) -> dict[str, object]:
         """Save current selection to a file as a mask.
 

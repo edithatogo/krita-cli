@@ -48,9 +48,7 @@ def test_get_command_history_success(httpx_mock: HTTPXMock) -> None:
 
 def test_get_command_history_empty(httpx_mock: HTTPXMock) -> None:
     """Client handles empty history response."""
-    httpx_mock.add_response(
-        json={"status": "ok", "history": [], "count": 0}
-    )
+    httpx_mock.add_response(json={"status": "ok", "history": [], "count": 0})
 
     config = ClientConfig()
     with KritaClient(config) as client:

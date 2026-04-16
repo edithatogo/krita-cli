@@ -71,7 +71,9 @@ def batch(
                         result_data = r.get("result", {})
                         if isinstance(result_data, dict) and "error" in result_data:
                             err_info = result_data["error"]
-                            err_msg = err_info.get("message", str(err_info)) if isinstance(err_info, dict) else str(err_info)
+                            err_msg = (
+                                err_info.get("message", str(err_info)) if isinstance(err_info, dict) else str(err_info)
+                            )
                     if not err_msg:
                         err_msg = "unknown"
                     console.print(f"  [red]✗ {r['action']}: {err_msg}[/red]")

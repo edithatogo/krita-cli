@@ -25,7 +25,7 @@ def mock_client():
 def test_replay_dry_run(tmp_path) -> None:
     history_file = tmp_path / "history.json"
     history_file.write_text(json.dumps([{"action": "set_color", "params": {"color": "#ff0000"}}]))
-    
+
     result = runner.invoke(app, ["replay", str(history_file), "--dry-run"])
     assert result.exit_code == 0
     assert "records are valid" in result.stdout
@@ -34,9 +34,9 @@ def test_replay_dry_run(tmp_path) -> None:
 def test_replay_execution(mock_client, tmp_path) -> None:
     history_file = tmp_path / "history.json"
     history_file.write_text(json.dumps([{"action": "set_color", "params": {"color": "#ff0000"}}]))
-    
+
     mock_client.send_command.return_value = {"status": "ok"}
-    
+
     result = runner.invoke(app, ["replay", str(history_file), "--speed", "0"])
     assert result.exit_code == 0
     assert "Replay complete: 1 succeeded" in result.stdout
@@ -46,7 +46,7 @@ def test_replay_execution(mock_client, tmp_path) -> None:
 def test_replay_invalid_json(tmp_path) -> None:
     history_file = tmp_path / "history.json"
     history_file.write_text("invalid json")
-    
+
     result = runner.invoke(app, ["replay", str(history_file)])
     assert result.exit_code == 1
     assert "Invalid JSON" in result.stdout
@@ -55,21 +55,23 @@ def test_replay_invalid_json(tmp_path) -> None:
 def test_replay_with_errors(mock_client, tmp_path) -> None:
     history_file = tmp_path / "history.json"
     # One valid, one missing action, one with error response, one with exception
-    history_file.write_text(json.dumps([
-        {"action": "set_color"},
-        {"params": {}},
-        {"action": "invalid"},
-        {"action": "fail"}
-    ]))
-    
+    history_file.write_text(
+        json.dumps([{"action": "set_color"}, {"params": {}}, {"action": "invalid"}, {"action": "fail"}])
+    )
+
     def mock_send(action, params):
-        if action == "set_color": return {"status": "ok"}
-        if action == "invalid": return {"error": {"message": "unknown action"}}
-        if action == "fail": raise KritaError("timeout")
+        if action == "set_color":
+            return {"status": "ok"}
+        if action == "invalid":
+            return {"error": {"message": "unknown action"}}
+        if action == "fail":
+            msg = "timeout"
+            raise KritaError(msg)
         return {"status": "ok"}
 
+
     mock_client.send_command.side_effect = mock_send
-    
+
     result = runner.invoke(app, ["replay", str(history_file), "--speed", "0"])
     assert result.exit_code == 0
     assert "1 succeeded, 3 failed" in result.stdout
@@ -82,7 +84,7 @@ def test_replay_with_speed(mock_client, tmp_path) -> None:
     history_file = tmp_path / "history.json"
     history_file.write_text(json.dumps([{"action": "set_color", "duration_ms": 10}]))
     mock_client.send_command.return_value = {"status": "ok"}
-    
+
     with patch("time.sleep") as mock_sleep:
         result = runner.invoke(app, ["replay", str(history_file), "--speed", "2.0"])
         assert result.exit_code == 0

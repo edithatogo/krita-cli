@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock
-
 import pytest
 import typer
 
 from krita_cli import _shared
-from krita_client import KritaError, ErrorCode
+from krita_client import ErrorCode, KritaError
 
 
 def test_handle_error_hints() -> None:
@@ -21,9 +19,9 @@ def test_handle_error_hints() -> None:
         ErrorCode.COMMAND_TIMEOUT,
         ErrorCode.BRUSH_NOT_FOUND,
         ErrorCode.FILE_NOT_FOUND,
-        "UNKNOWN_RECOVERABLE"
+        "UNKNOWN_RECOVERABLE",
     ]
-    
+
     for code in error_codes:
         exc = KritaError("message", code=code)
         exc.recoverable = True
@@ -32,9 +30,9 @@ def test_handle_error_hints() -> None:
 
 
 def test_handle_errors_context_manager() -> None:
-    with pytest.raises(typer.Exit):
-        with _shared._handle_errors():
-            raise KritaError("fail")
+    msg = "fail"
+    with pytest.raises(typer.Exit), _shared._handle_errors():
+        raise KritaError(msg)
 
 
 def test_format_result_error() -> None:

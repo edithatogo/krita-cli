@@ -13,12 +13,7 @@ from krita_client.models import (
 
 
 def test_batch_response_with_id() -> None:
-    resp = BatchResponse(
-        status="ok",
-        results=[],
-        count=0,
-        batch_id="550e8400-e29b-41d4-a716-446655440000"
-    )
+    resp = BatchResponse(status="ok", results=[], count=0, batch_id="550e8400-e29b-41d4-a716-446655440000")
     assert resp.batch_id == "550e8400-e29b-41d4-a716-446655440000"
 
 

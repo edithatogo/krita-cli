@@ -1,4 +1,5 @@
 """Root conftest for adding krita-plugin to the Python path."""
+
 import sys
 from pathlib import Path
 

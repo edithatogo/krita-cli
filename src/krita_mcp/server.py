@@ -911,7 +911,7 @@ def krita_security_status() -> str:
         rl = result.get("rate_limit", {})
         parts = [
             f"Rate limit: {rl.get('current_usage', 0)}/{rl.get('max_commands_per_minute', '?')} per minute",
-            f"Payload limit: {result.get('payload_limit', '?') / (1024*1024):.0f}MB",
+            f"Payload limit: {result.get('payload_limit', '?') / (1024 * 1024):.0f}MB",
             f"Batch limit: {result.get('batch_size_limit', '?')} commands",
             f"Max canvas: {result.get('max_canvas_dim', '?')}x{result.get('max_canvas_dim', '?')}",
         ]

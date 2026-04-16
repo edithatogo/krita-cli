@@ -207,7 +207,8 @@ def test_krita_selection_info_has_selection() -> None:
     with patch("krita_mcp.server._get_client") as mock_get:
         mock_client = MagicMock()
         mock_client.selection_info.return_value = {
-            "status": "ok", "has_selection": True,
+            "status": "ok",
+            "has_selection": True,
             "bounds": {"x": 10, "y": 20, "width": 100, "height": 200},
         }
         mock_get.return_value = mock_client
