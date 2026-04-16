@@ -107,7 +107,16 @@ jobs:
           channels: conda-forge,defaults
       - name: Build and Upload to Anaconda
         shell: bash -l {0}
+        env:
+          ANACONDA_API_TOKEN: ${{ secrets.ANACONDA_API_TOKEN }}
         run: |
           conda install -y anaconda-client conda-build
           conda build conda-recipe/ --output-folder dist/conda
-          anaconda -t ${{ secrets.ANACONDA_API_TOKEN }} upload dist/conda/noarch/krita-cli-*.tar.bz2 --force
+          # Find the built package (could be .conda or .tar.bz2)
+          PKG_FILE=$(find dist/conda -name "krita-cli-*.tar.bz2" -o -name "krita-cli-*.conda" | head -n 1)
+          if [ -z "$PKG_FILE" ]; then
+            echo "No package file found!"
+            exit 1
+          fi
+          echo "Uploading $PKG_FILE"
+          anaconda -t "$ANACONDA_API_TOKEN" upload "$PKG_FILE" --force
