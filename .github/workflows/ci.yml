@@ -57,21 +57,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - run: uv sync --frozen
-      - run: uv run pytest tests/ -v --cov=krita_client --cov=krita_mcp --cov=krita_cli --cov-fail-under=95
-
-  test-e2e-mock:
-    name: E2E Tests (Mock Plugin)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-        with:
-          version: ${{ env.UV_VERSION }}
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-      - run: uv sync --frozen
-      - run: uv run pytest tests/e2e/test_e2e_mock.py -v
+      - run: uv run pytest tests/ -v --cov=src --cov-fail-under=95
 
   build:
     name: Build Package
