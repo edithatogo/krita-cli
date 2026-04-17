@@ -30,10 +30,10 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/github/krita-cli"
-Repository = "https://github.com/github/krita-cli"
-Issues = "https://github.com/github/krita-cli/issues"
-Changelog = "https://github.com/github/krita-cli/blob/master/CHANGELOG.md"
+Homepage = "https://github.com/edithatogo/krita-cli"
+Repository = "https://github.com/edithatogo/krita-cli"
+Issues = "https://github.com/edithatogo/krita-cli/issues"
+Changelog = "https://github.com/edithatogo/krita-cli/blob/master/CHANGELOG.md"
 
 [project.scripts]
 krita = "krita_cli.cli:app"
