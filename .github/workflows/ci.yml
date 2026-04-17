@@ -119,4 +119,4 @@ jobs:
             exit 1
           fi
           echo "Uploading $PKG_FILE"
-          anaconda upload "$PKG_FILE" --force
+          anaconda --verbose upload "$PKG_FILE" --force
