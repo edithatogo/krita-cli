@@ -119,4 +119,4 @@ jobs:
             exit 1
           fi
           echo "Uploading $PKG_FILE"
-          anaconda -t "$ANACONDA_API_TOKEN" upload "$PKG_FILE" --force
+          anaconda upload "$PKG_FILE" --force
