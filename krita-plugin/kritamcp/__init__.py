@@ -23,17 +23,45 @@ import os
 import sys
 import threading
 import uuid
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, HTTPServer, ThreadingHTTPServer
 from typing import Any
+from urllib.parse import urlparse
+
+try:
+    with open(os.path.expanduser("~/kritamcp_startup.log"), "a") as _f:
+        import datetime as _dt
+        _f.write(f"[{_dt.datetime.now().isoformat()}] kritamcp import begin as {__name__} (Python {sys.version})\n")
+except Exception:
+    pass
 
 from krita import *
-from PyQt5.QtCore import QThread, QTimer, QPolygon, QPoint
-from PyQt5.QtGui import QColor
+from PyQt5.QtCore import QThread, QTimer, QPoint
+from PyQt5.QtGui import QColor, QPolygon
 
 from kritamcp.history_store import CommandHistoryStore
 from kritamcp.payload_validator import validate_payload_size, MAX_PAYLOAD_SIZE
 from kritamcp.rate_limiter import RateLimiter
 from kritamcp.snapshot_store import BatchSnapshotStore
+
+# -- Startup diagnostics (file log so failures are visible outside Krita) ----
+_DIAG_LOG = os.path.expanduser("~/kritamcp_startup.log")
+def _log_diag(message: str) -> None:
+    try:
+        with open(_DIAG_LOG, "a") as _f:
+            import datetime as _dt
+            _f.write(f"[{_dt.datetime.now().isoformat()}] {message}\n")
+    except Exception:
+        pass
+
+
+def _expand_user_path(path: str) -> str:
+    """Expand user and environment markers in a filesystem path."""
+    return os.path.expandvars(os.path.expanduser(path))
+
+try:
+    _log_diag(f"kritamcp module loaded as {__name__} (Python {sys.version})")
+except Exception:
+    pass
 
 # Try to import numpy for accelerated rendering
 try:
@@ -284,11 +312,14 @@ class ServerThread(QThread):
 
     def run(self) -> None:
         try:
-            self.server = HTTPServer(("localhost", self.port), PaintRequestHandler)
+            _log_diag(f"HTTP server thread starting on port {self.port}")
+            self.server = ThreadingHTTPServer(("localhost", self.port), PaintRequestHandler)
             logger.info("HTTP server started on port %d", self.port)
+            _log_diag(f"HTTP server started on port {self.port}")
             self.server.serve_forever()
         except OSError as exc:
             logger.error("Failed to start HTTP server on port %d: %s", self.port, exc)
+            _log_diag(f"HTTP server failed on port {self.port}: {exc}")
 
     def stop(self) -> None:
         if self.server:
@@ -303,6 +334,7 @@ class KritaMCPExtension(Extension):
     """Main Krita extension class."""
 
     def __init__(self, parent: Any) -> None:
+        _log_diag("KritaMCPExtension.__init__ begin")
         super().__init__(parent)
         self.server_thread: ServerThread | None = None
         self.timer: QTimer | None = None
@@ -316,6 +348,9 @@ class KritaMCPExtension(Extension):
         # Load configuration
         self.config_path = os.path.expanduser("~/.kritamcp_config.json")
         self.load_config()
+        _log_diag("KritaMCPExtension.__init__ after load_config")
+        self._ensure_runtime_started()
+        _log_diag("KritaMCPExtension.__init__ end")
 
     def _detect_capabilities(self) -> dict[str, bool]:
         """Detect which selection APIs are available in this Krita version."""
@@ -348,9 +383,10 @@ class KritaMCPExtension(Extension):
         # Add Krita API version info
         try:
             from krita import Krita
-            krita_version_str = Krita.version()
+            krita_instance = Krita.instance()
+            krita_version_str = krita_instance.version() if krita_instance else Krita.version()
             capabilities["krita_version"] = krita_version_str
-        except (AttributeError, ImportError):
+        except (AttributeError, ImportError, TypeError):
             capabilities["krita_version"] = "unknown"
         
         return capabilities
@@ -386,9 +422,7 @@ class KritaMCPExtension(Extension):
                 with open(krita_cli_config, encoding="utf-8") as f:
                     config = json.load(f)
                     SERVER_PORT = config.get("port", SERVER_PORT)
-                    CANVAS_OUTPUT_DIR = config.get(
-                        "canvas_output_dir", os.path.expanduser(config.get("canvas_output_dir", CANVAS_OUTPUT_DIR))
-                    )
+                    CANVAS_OUTPUT_DIR = _expand_user_path(config.get("canvas_output_dir", CANVAS_OUTPUT_DIR))
                     MAX_CANVAS_DIM = config.get("max_canvas_dim", MAX_CANVAS_DIM)
                     MAX_BATCH_SIZE = config.get("max_batch_size", MAX_BATCH_SIZE)
                     MAX_LAYERS = config.get("max_layers", MAX_LAYERS)
@@ -403,22 +437,29 @@ class KritaMCPExtension(Extension):
                 with open(self.config_path, encoding="utf-8") as f:
                     config = json.load(f)
                     SERVER_PORT = config.get("port", SERVER_PORT)
-                    CANVAS_OUTPUT_DIR = config.get(
-                        "output_dir", os.path.expanduser(config.get("output_dir", CANVAS_OUTPUT_DIR))
-                    )
+                    CANVAS_OUTPUT_DIR = _expand_user_path(config.get("output_dir", CANVAS_OUTPUT_DIR))
                     MAX_CANVAS_DIM = config.get("max_canvas_dim", MAX_CANVAS_DIM)
                     logger.info("Loaded config from %s", self.config_path)
             except Exception as e:
                 logger.error("Failed to load config from %s: %s", self.config_path, e)
 
     def setup(self) -> None:
-        pass
+        self._ensure_runtime_started()
 
     def createActions(self, window: Any) -> None:
         """Called when a new window is created."""
+        self._ensure_runtime_started()
+
+    def call(self, action: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Backward-compatible generic dispatcher used by the live tests."""
+        return self.handle_command(action, params or {})
+
+    def _ensure_runtime_started(self) -> None:
+        """Start background runtime pieces once, regardless of Krita's callback order."""
         os.makedirs(CANVAS_OUTPUT_DIR, exist_ok=True)
 
         if self.server_thread is None:
+            _log_diag(f"Requested HTTP server startup on port {SERVER_PORT}")
             self.server_thread = ServerThread(SERVER_PORT)
             self.server_thread.start()
 
@@ -2161,9 +2202,14 @@ class KritaMCPExtension(Extension):
 
 
 # Register the extension
-if __name__ != "builtins" and "pytest" not in sys.modules:
+if "pytest" not in sys.modules:
     try:
         Krita.instance().addExtension(KritaMCPExtension(Krita.instance()))
-    except (NameError, AttributeError):
+        _log_diag("Krita.instance().addExtension completed")
+    except (NameError, AttributeError) as exc:
         # Krita not defined or instance() not available
+        _log_diag(f"Extension registration unavailable: {exc}")
+        pass
+    except Exception as exc:
+        _log_diag(f"Extension registration failed: {exc}")
         pass

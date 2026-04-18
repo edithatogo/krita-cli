@@ -209,6 +209,10 @@ class KritaClient:
         """Check if Krita is running and the plugin is active."""
         return self._health_get()
 
+    def call(self, action: str, params: dict[str, object] | None = None) -> dict[str, object]:
+        """Call an arbitrary plugin action."""
+        return self._send(action, params or {})
+
     def new_canvas(
         self,
         *,

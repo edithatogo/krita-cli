@@ -309,6 +309,47 @@ class MockKritaPluginHandler(BaseHTTPRequestHandler):
         self.wfile.write(json.dumps(data).encode())
 
 
+@pytest.fixture(scope="session")
+def krita_driver() -> Generator[None, None, None]:
+    """Session-scoped fixture: launch Krita with the MCP plugin and keep it running."""
+    try:
+        from tests.e2e.krita_driver import KritaDriver
+    except ImportError:
+        from krita_driver import KritaDriver  # type: ignore[no-redef]
+
+    driver = KritaDriver()
+    try:
+        driver.start()
+    except RuntimeError as exc:
+        pytest.skip(str(exc))
+    yield
+    driver.stop()
+
+
+@pytest.fixture
+def live_client(krita_driver: None) -> "KritaClient":  # noqa: F821
+    """KritaClient connected to the real Krita plugin (requires krita_driver)."""
+    import os
+
+    import httpx as _httpx  # noqa: F401 — ensure SSL_CERT_FILE is cleared in this process
+
+    from tests.e2e.krita_driver import PLUGIN_PORT
+
+    os.environ.pop("SSL_CERT_FILE", None)
+    return KritaClient(ClientConfig(url=f"http://127.0.0.1:{PLUGIN_PORT}"))
+
+
+@pytest.fixture(scope="session")
+def krita_plugin_base_url() -> str:
+    """Base URL for the Krita plugin health and command endpoints."""
+    try:
+        from tests.e2e.krita_driver import PLUGIN_PORT
+    except ImportError:
+        from krita_driver import PLUGIN_PORT  # type: ignore[no-redef]
+
+    return f"http://127.0.0.1:{PLUGIN_PORT}"
+
+
 @pytest.fixture
 def mock_plugin_server() -> Generator[HTTPServer, None, None]:
     """Start a mock Krita plugin HTTP server for E2E testing."""

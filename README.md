@@ -6,7 +6,7 @@ This subproject provides the core implementation of the Krita-MCP ecosystem, inc
 
 ## 🛠️ Components
 
-1. **Krita Plugin** (`krita-plugin/`) — A Python plugin for Krita that exposes a thread-safe HTTP server on `localhost:5678`.
+1. **Krita Plugin** (`krita-plugin/`) — A Python plugin for Krita that exposes a thread-safe HTTP server on `localhost` using the configured port (default `5678`).
 2. **MCP Server** (`src/krita_mcp/`) — A FastMCP server exposing 40+ painting and manipulation tools.
 3. **Krita CLI** (`src/krita_cli/`) — A Typer-based command line interface for human operators.
 4. **Krita Client** (`src/krita_client/`) — A reusable, fully-typed Python library for Krita automation.
@@ -26,6 +26,22 @@ Enable **"Krita MCP Bridge"** in Krita (Configure Krita → Python Plugin Manage
 # Install dependencies with uv
 uv sync
 ```
+
+### 3. Windows Validation Checklist
+Before debugging the plugin, make sure the local Python runtime is healthy:
+
+1. `python -c "import ssl, ctypes"` must succeed.
+2. `python scripts/windows_preflight.py` should report a clean Windows setup.
+3. `uv run pytest tests/e2e/test_e2e_mock.py` should pass without Krita.
+4. The plugin files must exist under `%APPDATA%\krita\pykrita\kritamcp\`.
+5. Krita must be restarted after enabling **Krita MCP Bridge** in the Plugin Manager.
+6. The plugin should expose `http://127.0.0.1:<configured-port>/health` once Krita finishes loading.
+
+If Krita starts but `/health` never appears, check the diagnostic artifacts in your home directory:
+- `~/kritamcp_startup.log`
+- `~/kritamcp_diag.log`
+
+If those logs are missing entirely, the plugin likely was not enabled or did not load during startup.
 
 ## 🔧 CLI Commands
 
