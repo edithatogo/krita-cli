@@ -1,6 +1,6 @@
 [project]
 name = "krita-cli"
-version = "1.0.0"
+version = "1.0.1"
 description = "SOTA CLI + MCP server for programmatic painting in Krita"
 readme = "README.md"
 license = "MIT"
