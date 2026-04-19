@@ -327,7 +327,7 @@ def krita_driver() -> Generator[None, None, None]:
 
 
 @pytest.fixture
-def live_client(krita_driver: None) -> "KritaClient":  # noqa: F821
+def live_client(krita_driver: None) -> KritaClient:
     """KritaClient connected to the real Krita plugin (requires krita_driver)."""
     import os
 

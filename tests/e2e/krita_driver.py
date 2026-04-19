@@ -11,32 +11,32 @@ Requires:
 
 from __future__ import annotations
 
+import contextlib
+import json
 import os
 import shutil
 import subprocess
+import threading
 import time
 from pathlib import Path
+from typing import Self
 
 import httpx
-
 
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
 
+
 def _config_port() -> int:
     """Read port from ~/.krita-cli/config.json if present, else default 5678."""
-    import json as _json
-
     for candidate in [
         Path.home() / ".krita-cli" / "config.json",
         Path.home() / ".kritamcp_config.json",
     ]:
         if candidate.exists():
-            try:
-                return int(_json.loads(candidate.read_text()).get("port", 5678))
-            except Exception:
-                pass
+            with contextlib.suppress(json.JSONDecodeError, OSError, TypeError, ValueError):
+                return int(json.loads(candidate.read_text()).get("port", 5678))
     return 5678
 
 
@@ -78,10 +78,8 @@ def install_plugin() -> None:
 
     desktop_src = PLUGIN_SRC / "kritamcp.desktop"
     desktop_dst = PYKRITA_DIR / "kritamcp.desktop"
-    try:
+    with contextlib.suppress(PermissionError):
         shutil.copy2(desktop_src, desktop_dst)
-    except PermissionError:
-        pass  # Krita has the file locked — already installed, skip
 
     plugin_src = PLUGIN_SRC / "kritamcp"
     plugin_dst = PYKRITA_DIR / "kritamcp"
@@ -94,10 +92,8 @@ def install_plugin() -> None:
                 rel = src_file.relative_to(plugin_src)
                 dst_file = plugin_dst / rel
                 dst_file.parent.mkdir(parents=True, exist_ok=True)
-                try:
+                with contextlib.suppress(PermissionError):
                     shutil.copy2(src_file, dst_file)
-                except PermissionError:
-                    pass  # Locked by Krita — already present, skip
 
 
 def _plugin_state_summary() -> str:
@@ -123,26 +119,26 @@ def wait_for_window(title_fragment: str, timeout: float = KRITA_STARTUP_TIMEOUT)
 
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
-            found = []
+            found_hwnds: list[int] = []
 
-            def _cb(hwnd: int, _: object) -> None:
+            def _cb(hwnd: int, _: object, results: list[int] = found_hwnds) -> None:
                 if win32gui.IsWindowVisible(hwnd) and title_fragment in win32gui.GetWindowText(hwnd):
-                    found.append(hwnd)
+                    results.append(hwnd)
 
             win32gui.EnumWindows(_cb, None)
-            if found:
+            if found_hwnds:
                 return True
             time.sleep(1)
-        return False
     except ImportError:
         # Not on Windows — just sleep and hope
         time.sleep(10)
         return True
+    return False
 
 
 def open_new_document() -> None:
     """Send Ctrl+N then Enter to open a new document with default settings."""
-    try:
+    with contextlib.suppress(Exception):
         import win32con
         import win32gui
 
@@ -158,8 +154,6 @@ def open_new_document() -> None:
         if hwnd:
             win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
             win32gui.BringWindowToTop(hwnd)
-    except Exception:
-        pass
 
     time.sleep(1)
 
@@ -167,11 +161,11 @@ def open_new_document() -> None:
         from pywinauto.keyboard import send_keys
 
         send_keys("^n")  # Ctrl+N — New document dialog
-        time.sleep(3)    # Wait for dialog to appear
+        time.sleep(3)  # Wait for dialog to appear
         send_keys("{ENTER}")  # Accept defaults
-        time.sleep(2)    # Wait for canvas to open
-    except Exception:
-        pass
+        time.sleep(2)  # Wait for canvas to open
+    except (ImportError, OSError):
+        return
 
 
 def wait_for_plugin(timeout: float = PLUGIN_STARTUP_TIMEOUT) -> bool:
@@ -182,8 +176,8 @@ def wait_for_plugin(timeout: float = PLUGIN_STARTUP_TIMEOUT) -> bool:
             r = httpx.get(f"http://127.0.0.1:{PLUGIN_PORT}/health", timeout=2)
             if r.json().get("status") == "ok":
                 return True
-        except Exception:
-            pass
+        except (httpx.HTTPError, ValueError):
+            ...
         time.sleep(1)
     return False
 
@@ -202,12 +196,13 @@ class KritaDriver:
             r = httpx.get(f"http://127.0.0.1:{PLUGIN_PORT}/health", timeout=2)
             if r.json().get("status") == "ok":
                 return  # Already running
-        except Exception:
-            pass
+        except (httpx.HTTPError, ValueError):
+            ...
 
         exe = find_krita_exe()
         if exe is None:
-            raise RuntimeError("Krita executable not found. Install Krita or add it to PATH.")
+            msg = "Krita executable not found. Install Krita or add it to PATH."
+            raise RuntimeError(msg)
 
         install_plugin()
 
@@ -223,10 +218,8 @@ class KritaDriver:
         if not wait_for_window("Krita", timeout=KRITA_STARTUP_TIMEOUT):
             stdout = self._read_output()
             self.stop()
-            raise RuntimeError(
-                f"Krita window did not appear within {KRITA_STARTUP_TIMEOUT}s.\n"
-                f"Krita output:\n{stdout}"
-            )
+            msg = f"Krita window did not appear within {KRITA_STARTUP_TIMEOUT}s.\nKrita output:\n{stdout}"
+            raise RuntimeError(msg)
 
         # Wait for Krita to finish its splash/loading sequence
         time.sleep(4)
@@ -255,7 +248,7 @@ class KritaDriver:
                     "Check for a port/config mismatch or a startup failure."
                 )
             self.stop()
-            raise RuntimeError(
+            msg = (
                 f"Krita MCP plugin did not start on port {PLUGIN_PORT} within "
                 f"{PLUGIN_STARTUP_TIMEOUT}s.\n"
                 f"{cause}\n"
@@ -265,30 +258,25 @@ class KritaDriver:
                 f"{state}\n"
                 f"Krita output:\n{stdout}"
             )
+            raise RuntimeError(msg)
 
     def _read_output(self) -> str:
         """Read any available output from the Krita process without blocking."""
         if self._proc is None or self._proc.stdout is None:
             return "(no output)"
-        try:
+        with contextlib.suppress(Exception):
             # Non-blocking read on Windows via a short timeout thread
-            import threading
-
             buf: list[bytes] = []
 
             def _reader() -> None:
-                try:
+                with contextlib.suppress(Exception):
                     buf.append(self._proc.stdout.read(8192))  # type: ignore[union-attr]
-                except Exception:
-                    pass
 
             t = threading.Thread(target=_reader, daemon=True)
             t.start()
             t.join(timeout=2)
             if buf:
                 return buf[0].decode(errors="replace")
-        except Exception:
-            pass
         return "(unavailable)"
 
     def stop(self) -> None:
@@ -300,7 +288,7 @@ class KritaDriver:
                 self._proc.kill()
             self._proc = None
 
-    def __enter__(self) -> KritaDriver:
+    def __enter__(self) -> Self:
         self.start()
         return self
 

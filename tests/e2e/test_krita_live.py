@@ -15,10 +15,13 @@ Requirements:
 from __future__ import annotations
 
 import sys
+from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 
-from krita_client import KritaClient
+if TYPE_CHECKING:
+    from krita_client import KritaClient
 
 # All tests in this file require a live Krita instance
 pytestmark = [pytest.mark.e2e, pytest.mark.slow]
@@ -76,13 +79,11 @@ class TestLiveCanvas:
         assert result["status"] == "ok"
 
     def test_get_canvas_exports_file(self, live_client: KritaClient) -> None:
-        import os
-
         live_client.new_canvas(width=200, height=200, name="E2E Export Test")
         result = live_client.get_canvas(filename="e2e_export.png")
         assert result["status"] == "ok"
         assert "path" in result
-        assert os.path.exists(result["path"])
+        assert Path(result["path"]).exists()
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Live Krita tests require Windows")

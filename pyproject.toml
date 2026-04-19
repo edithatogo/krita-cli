@@ -55,6 +55,7 @@ dev = [
     "pytest-httpx>=0.36.0",
     "pytest-xdist>=3.8.0",
     "python-semantic-release>=9.21.1",
+    "pywinauto>=0.6.8",
     "ruff>=0.15.9",
     "scalene>=2.2.1",
     "ty>=0.0.28",
