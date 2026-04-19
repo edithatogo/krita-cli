@@ -1,0 +1,8 @@
+{
+  "name": "pelican-bike-drawing",
+  "interface": {
+    "displayName": "Pelican Bike Drawing"
+  },
+  "version": "0.1.0",
+  "description": "Reference-driven Krita drawing workflow for pelicans on bicycles."
+}
