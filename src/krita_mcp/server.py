@@ -563,6 +563,133 @@ def krita_get_current_brush() -> str:
 
 
 @mcp.tool()
+def krita_list_layers() -> str:
+    """List all layers in the current document."""
+    try:
+        client = _get_client()
+        result = client.list_layers()
+        if "error" in result:
+            return f"Error: {result['error']}"
+        layers_raw = result.get("layers", [])
+        if not isinstance(layers_raw, list):
+            layers_raw = []
+        layers = cast("list[dict[str, Any]]", layers_raw)
+        count = result.get("count", len(layers))
+        if not layers:
+            return "No layers found in the current document"
+        names = [str(layer.get("name", "?")) for layer in layers]
+        return f"Layers ({count}): {', '.join(names)}"
+    except KritaError as exc:
+        return _format_error(exc)
+
+
+@mcp.tool()
+def krita_create_layer(
+    name: str = "New Layer",
+    layer_type: str = "paintlayer",
+) -> str:
+    """Create a new layer in the current document.
+
+    Args:
+        name: Layer name.
+        layer_type: Krita node type, e.g. "paintlayer".
+    """
+    try:
+        client = _get_client()
+        result = client.create_layer(name=name, layer_type=layer_type)
+        if "error" in result:
+            return f"Error: {result['error']}"
+        created_name = result.get("name", name)
+        created_type = result.get("type", layer_type)
+        return f"Created layer '{created_name}' ({created_type})"
+    except KritaError as exc:
+        return _format_error(exc)
+
+
+@mcp.tool()
+def krita_select_layer(name: str) -> str:
+    """Select a layer by name."""
+    try:
+        client = _get_client()
+        result = client.select_layer(name=name)
+        if "error" in result:
+            return f"Error: {result['error']}"
+        selected_name = result.get("selected", name)
+        return f"Selected layer '{selected_name}'"
+    except KritaError as exc:
+        return _format_error(exc)
+
+
+@mcp.tool()
+def krita_delete_layer(name: str) -> str:
+    """Delete a layer by name."""
+    try:
+        client = _get_client()
+        result = client.delete_layer(name=name)
+        if "error" in result:
+            return f"Error: {result['error']}"
+        deleted_name = result.get("deleted", name)
+        return f"Deleted layer '{deleted_name}'"
+    except KritaError as exc:
+        return _format_error(exc)
+
+
+@mcp.tool()
+def krita_rename_layer(old_name: str, new_name: str) -> str:
+    """Rename a layer.
+
+    Args:
+        old_name: Current layer name.
+        new_name: Replacement layer name.
+    """
+    try:
+        client = _get_client()
+        result = client.rename_layer(old_name=old_name, new_name=new_name)
+        if "error" in result:
+            return f"Error: {result['error']}"
+        return f"Renamed layer '{old_name}' to '{new_name}'"
+    except KritaError as exc:
+        return _format_error(exc)
+
+
+@mcp.tool()
+def krita_set_layer_opacity(name: str, opacity: float) -> str:
+    """Set the opacity of a layer.
+
+    Args:
+        name: Layer name.
+        opacity: Opacity as a 0.0-1.0 fraction.
+    """
+    try:
+        client = _get_client()
+        result = client.set_layer_opacity(name=name, opacity=opacity)
+        if "error" in result:
+            return f"Error: {result['error']}"
+        return f"Set layer '{name}' opacity to {opacity}"
+    except KritaError as exc:
+        return _format_error(exc)
+
+
+@mcp.tool()
+def krita_set_layer_visibility(name: str, visible: bool) -> str:
+    """Toggle layer visibility.
+
+    Args:
+        name: Layer name.
+        visible: True to show the layer, False to hide it.
+    """
+    try:
+        client = _get_client()
+        result = client.set_layer_visibility(name=name, visible=visible)
+        if "error" in result:
+            return f"Error: {result['error']}"
+        state = "visible" if visible else "hidden"
+        return f"Set layer '{name}' to {state}"
+    except KritaError as exc:
+        return _format_error(exc)
+
+
+@mcp.tool()
 def krita_select_rect(x: int, y: int, width: int, height: int) -> str:
     """Select a rectangular area on the canvas.
 
@@ -615,6 +742,23 @@ def krita_select_polygon(points: list[list[int]]) -> str:
         if "error" in result:
             return f"Error: {result['error']}"
         return f"Selected polygon with {len(points)} points"
+    except KritaError as exc:
+        return _format_error(exc)
+
+
+@mcp.tool()
+def krita_select_area(x: int, y: int, width: int, height: int) -> str:
+    """Compatibility alias for rectangular selection.
+
+    This mirrors the CLI `selection select-area` alias while routing through the
+    same rectangle-selection client call.
+    """
+    try:
+        client = _get_client()
+        result = client.select_rect(x=x, y=y, width=width, height=height)
+        if "error" in result:
+            return f"Error: {result['error']}"
+        return f"Selected area {width}x{height} at ({x}, {y})"
     except KritaError as exc:
         return _format_error(exc)
 
@@ -828,6 +972,20 @@ def krita_border_selection(pixels: int) -> str:
 
 
 @mcp.tool()
+def krita_combine_selections(operation: str, mask_path: str) -> str:
+    """Combine the current selection with a second selection mask."""
+    try:
+        client = _get_client()
+        result = client.combine_selections(operation=operation, mask_path=mask_path)
+        if "error" in result:
+            return f"Error: {result['error']}"
+        count = result.get("selected_count", 0)
+        return f"Combined selection via {operation}: {count} pixels"
+    except KritaError as exc:
+        return _format_error(exc)
+
+
+@mcp.tool()
 def krita_save_selection(path: str) -> str:
     """Save the current selection as a PNG mask image (white=selected, black=unselected)."""
     try:
@@ -942,6 +1100,19 @@ def krita_list_selection_channels() -> str:
 
 
 @mcp.tool()
+def krita_delete_selection_channel(name: str) -> str:
+    """Delete a saved selection channel from the current document."""
+    try:
+        client = _get_client()
+        result = client.delete_selection_channel(name=name)
+        if "error" in result:
+            return f"Error: {result['error']}"
+        return f"Deleted selection channel '{name}'"
+    except KritaError as exc:
+        return _format_error(exc)
+
+
+@mcp.tool()
 def krita_security_status() -> str:
     """Get current security limits and usage from the Krita plugin."""
     try:
@@ -990,9 +1161,21 @@ def krita_list_tools() -> str:
         ("krita_open_file", "Open existing file"),
         ("krita_batch", "Execute multiple commands sequentially"),
         ("krita_rollback", "Roll back a batch operation"),
+        ("krita_get_command_history", "Get recent command history"),
+        ("krita_get_canvas_info", "Get canvas metadata"),
+        ("krita_get_current_color", "Get active foreground/background colors"),
+        ("krita_get_current_brush", "Get active brush settings"),
+        ("krita_list_layers", "List document layers"),
+        ("krita_create_layer", "Create a new layer"),
+        ("krita_select_layer", "Select a layer by name"),
+        ("krita_delete_layer", "Delete a layer by name"),
+        ("krita_rename_layer", "Rename a layer"),
+        ("krita_set_layer_opacity", "Set layer opacity"),
+        ("krita_set_layer_visibility", "Show or hide a layer"),
         ("krita_select_rect", "Select a rectangular area"),
         ("krita_select_ellipse", "Select an elliptical area"),
         ("krita_select_polygon", "Select a polygonal area"),
+        ("krita_select_area", "Compatibility alias for rectangular selection"),
         ("krita_selection_info", "Get current selection bounds"),
         ("krita_invert_selection", "Invert the current selection"),
         ("krita_clear_selection", "Clear selection contents"),
@@ -1002,12 +1185,14 @@ def krita_list_tools() -> str:
         ("krita_grow_selection", "Grow selection by N pixels"),
         ("krita_shrink_selection", "Shrink selection by N pixels"),
         ("krita_border_selection", "Create border around selection"),
+        ("krita_combine_selections", "Combine current selection with a mask"),
         ("krita_save_selection", "Save selection as PNG mask"),
         ("krita_load_selection", "Load selection from PNG mask"),
         ("krita_selection_stats", "Get selection statistics"),
         ("krita_save_selection_channel", "Save selection as named channel"),
         ("krita_load_selection_channel", "Load named selection channel"),
         ("krita_list_selection_channels", "List saved selection channels"),
+        ("krita_delete_selection_channel", "Delete a saved selection channel"),
         ("krita_select_by_color", "Select by color (magic wand/global)"),
         ("krita_select_by_alpha", "Select by alpha range"),
         ("krita_get_capabilities", "Get detected API capabilities"),

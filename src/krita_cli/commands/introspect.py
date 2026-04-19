@@ -1,4 +1,4 @@
-"""Canvas introspection CLI commands: canvas-info, current-color, current-brush."""
+"""Canvas introspection CLI commands."""
 
 from __future__ import annotations
 
@@ -41,6 +41,17 @@ def current_brush(ctx: Context) -> None:
     try:
         client = _shared._get_client(ctx)
         result = client.get_current_brush()
+        _shared._format_result(result)
+    except KritaError as exc:
+        _shared._handle_error(exc)
+
+
+@app.command("capabilities")
+def capabilities(ctx: Context) -> None:
+    """Get detected plugin/API capability flags."""
+    try:
+        client = _shared._get_client(ctx)
+        result = client.get_capabilities()
         _shared._format_result(result)
     except KritaError as exc:
         _shared._handle_error(exc)

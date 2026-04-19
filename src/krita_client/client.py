@@ -492,11 +492,13 @@ class KritaClient:
     def combine_selections(
         self,
         operation: str,
+        *,
+        mask_path: str,
     ) -> dict[str, object]:
-        """Combine selections using union, intersect, or subtract."""
+        """Combine the current selection with a mask selection."""
         from krita_client.models import CombineSelectionParams
 
-        validated = self._validate(CombineSelectionParams, {"operation": operation})
+        validated = self._validate(CombineSelectionParams, {"operation": operation, "mask_path": mask_path})
         return self._send("combine_selections", validated)
 
     def clear_selection(self) -> dict[str, object]:

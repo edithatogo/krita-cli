@@ -146,6 +146,14 @@ def test_border_selection(mock_client) -> None:
     mock_client.border_selection.assert_called_once_with(2)
 
 
+def test_combine_selections(mock_client) -> None:
+    mock_client.combine_selections.return_value = {"status": "ok", "selected_count": 42}
+    result = runner.invoke(app, ["selection", "combine-selections", "union", "mask.png"])
+    assert result.exit_code == 0
+    assert "Combined selection via union" in result.stdout
+    mock_client.combine_selections.assert_called_once_with(operation="union", mask_path="mask.png")
+
+
 def test_save_selection(mock_client) -> None:
     mock_client.save_selection.return_value = {"status": "ok"}
     result = runner.invoke(app, ["selection", "save-selection", "mask.png"])

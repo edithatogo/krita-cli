@@ -47,7 +47,7 @@ def test_border_selection(client) -> None:
 def test_combine_selections(client) -> None:
     with patch.object(client, "_send") as mock_send:
         mock_send.return_value = {"status": "ok"}
-        client.combine_selections(operation="union")
+        client.combine_selections(operation="union", mask_path="mask.png")
         mock_send.assert_called_once()
 
 

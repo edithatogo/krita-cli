@@ -197,20 +197,26 @@ class TestCombineSelectionParams:
 
     def test_union(self) -> None:
         """Union operation should be valid."""
-        params = CombineSelectionParams(operation="union")
+        params = CombineSelectionParams(operation="union", mask_path="mask.png")
         assert params.operation == "union"
+        assert params.mask_path == "mask.png"
 
     def test_intersect(self) -> None:
         """Intersect operation should be valid."""
-        params = CombineSelectionParams(operation="intersect")
+        params = CombineSelectionParams(operation="intersect", mask_path="mask.png")
         assert params.operation == "intersect"
 
     def test_subtract(self) -> None:
         """Subtract operation should be valid."""
-        params = CombineSelectionParams(operation="subtract")
+        params = CombineSelectionParams(operation="subtract", mask_path="mask.png")
         assert params.operation == "subtract"
 
     def test_invalid_operation_rejected(self) -> None:
         """Invalid operation should be rejected."""
         with pytest.raises(ValidationError):
-            CombineSelectionParams(operation="invalid")
+            CombineSelectionParams(operation="invalid", mask_path="mask.png")
+
+    def test_empty_mask_path_rejected(self) -> None:
+        """Empty mask path should be rejected."""
+        with pytest.raises(ValidationError):
+            CombineSelectionParams(operation="union", mask_path="")

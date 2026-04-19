@@ -38,6 +38,13 @@ def test_krita_select_polygon(mock_client) -> None:
     mock_client.select_polygon.assert_called_once_with(points=[[0, 0], [10, 0], [0, 10]])
 
 
+def test_krita_select_area(mock_client) -> None:
+    mock_client.select_rect.return_value = {"status": "ok"}
+    result = server.krita_select_area(x=5, y=10, width=20, height=30)
+    assert "Selected area 20x30 at (5, 10)" in result
+    mock_client.select_rect.assert_called_once_with(x=5, y=10, width=20, height=30)
+
+
 def test_krita_selection_info(mock_client) -> None:
     mock_client.selection_info.return_value = {
         "has_selection": True,
@@ -109,6 +116,13 @@ def test_krita_border_selection(mock_client) -> None:
     assert "Created 2px border" in result
 
 
+def test_krita_combine_selections(mock_client) -> None:
+    mock_client.combine_selections.return_value = {"status": "ok", "selected_count": 42}
+    result = server.krita_combine_selections(operation="union", mask_path="mask.png")
+    assert "Combined selection via union: 42 pixels" in result
+    mock_client.combine_selections.assert_called_once_with(operation="union", mask_path="mask.png")
+
+
 def test_krita_save_selection(mock_client) -> None:
     mock_client.save_selection.return_value = {"status": "ok"}
     result = server.krita_save_selection(path="mask.png")
@@ -147,3 +161,10 @@ def test_krita_list_selection_channels(mock_client) -> None:
     mock_client.list_selection_channels.return_value = {"status": "ok", "count": 1, "channels": [{"name": "ch1"}]}
     result = server.krita_list_selection_channels()
     assert "Selection channels (1): ch1" in result
+
+
+def test_krita_delete_selection_channel(mock_client) -> None:
+    mock_client.delete_selection_channel.return_value = {"status": "ok"}
+    result = server.krita_delete_selection_channel(name="ch1")
+    assert "Deleted selection channel 'ch1'" in result
+    mock_client.delete_selection_channel.assert_called_once_with(name="ch1")

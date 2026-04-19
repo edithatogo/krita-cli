@@ -105,6 +105,7 @@ class MockKritaPluginHandler(BaseHTTPRequestHandler):
             "deselect": self._cmd_deselect,
             "select_by_color": self._cmd_select_by_color,
             "select_by_alpha": self._cmd_select_by_alpha,
+            "combine_selections": self._cmd_combine_selections,
             "batch": self._cmd_batch,
             "get_command_history": self._cmd_history,
             "get_capabilities": self._cmd_capabilities,
@@ -196,6 +197,26 @@ class MockKritaPluginHandler(BaseHTTPRequestHandler):
             self._state.setdefault("redo_stack", []).clear()
         self._state["selection"] = None
         return {"status": "ok"}
+
+    def _cmd_combine_selections(self, params: dict[str, Any]) -> dict[str, Any]:
+        current_selection = self._state.get("selection")
+        if current_selection is None:
+            return {"error": "No active selection to combine"}
+
+        operation = params.get("operation", "union")
+        mask_path = params.get("mask_path", "")
+        self._state["selection"] = {
+            "type": "combined",
+            "operation": operation,
+            "mask_path": mask_path,
+            "source": current_selection,
+        }
+        return {
+            "status": "ok",
+            "operation": operation,
+            "mask_path": mask_path,
+            "selected_count": 42,
+        }
 
     def _cmd_undo(self, params: dict[str, Any]) -> dict[str, Any]:
         """Undo the last selection operation."""

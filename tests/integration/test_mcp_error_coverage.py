@@ -234,6 +234,12 @@ def test_krita_border_selection_error(mock_client) -> None:
     assert "Error: failed" in result
 
 
+def test_krita_combine_selections_error(mock_client) -> None:
+    mock_client.combine_selections.return_value = {"error": "failed"}
+    result = server.krita_combine_selections("union", "mask.png")
+    assert "Error: failed" in result
+
+
 def test_krita_save_selection_error(mock_client) -> None:
     mock_client.save_selection.return_value = {"error": "failed"}
     result = server.krita_save_selection("test.png")

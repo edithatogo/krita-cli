@@ -265,7 +265,7 @@ def test_krita_list_tools_success() -> None:
     result = server_module.krita_list_tools()
     assert "krita_stroke" in result
     assert "krita_select_rect" in result
-    assert "40 total" in result
+    assert "54 total" in result
 
 
 def test_krita_get_canvas_info_full() -> None:

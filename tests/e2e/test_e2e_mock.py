@@ -96,6 +96,14 @@ class TestE2ESelection:
         result = e2e_client.clear_selection()
         assert result["status"] == "ok"
 
+    def test_combine_selections(self, e2e_client: KritaClient) -> None:
+        """Combining the active selection with a mask should succeed."""
+        e2e_client.select_rect(x=0, y=0, width=100, height=100)
+        result = e2e_client.combine_selections("union", mask_path="mask.png")
+        assert result["status"] == "ok"
+        assert result["operation"] == "union"
+        assert result["mask_path"] == "mask.png"
+
 
 class TestE2EClippingAwareness:
     """E2E tests for clipping awareness in responses."""

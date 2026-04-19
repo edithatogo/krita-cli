@@ -30,6 +30,7 @@ from urllib.parse import urlparse
 try:
     with open(os.path.expanduser("~/kritamcp_startup.log"), "a") as _f:
         import datetime as _dt
+
         _f.write(f"[{_dt.datetime.now().isoformat()}] kritamcp import begin as {__name__} (Python {sys.version})\n")
 except Exception:
     pass
@@ -45,10 +46,13 @@ from kritamcp.snapshot_store import BatchSnapshotStore
 
 # -- Startup diagnostics (file log so failures are visible outside Krita) ----
 _DIAG_LOG = os.path.expanduser("~/kritamcp_startup.log")
+
+
 def _log_diag(message: str) -> None:
     try:
         with open(_DIAG_LOG, "a") as _f:
             import datetime as _dt
+
             _f.write(f"[{_dt.datetime.now().isoformat()}] {message}\n")
     except Exception:
         pass
@@ -57,6 +61,7 @@ def _log_diag(message: str) -> None:
 def _expand_user_path(path: str) -> str:
     """Expand user and environment markers in a filesystem path."""
     return os.path.expandvars(os.path.expanduser(path))
+
 
 try:
     _log_diag(f"kritamcp module loaded as {__name__} (Python {sys.version})")
@@ -357,6 +362,7 @@ class KritaMCPExtension(Extension):
         capabilities: dict[str, bool] = {}
         try:
             from krita import Document
+
             doc: Document | None = None
             # Test on a temporary document if available, otherwise infer from API
             # Check if Selection.selectEllipse exists
@@ -379,16 +385,17 @@ class KritaMCPExtension(Extension):
             capabilities["select_ellipse"] = False
             capabilities["select_polygon"] = False
             capabilities["selection_bounds"] = False
-        
+
         # Add Krita API version info
         try:
             from krita import Krita
+
             krita_instance = Krita.instance()
             krita_version_str = krita_instance.version() if krita_instance else Krita.version()
             capabilities["krita_version"] = krita_version_str
         except (AttributeError, ImportError, TypeError):
             capabilities["krita_version"] = "unknown"
-        
+
         return capabilities
 
     def get_capabilities(self) -> dict[str, object]:
@@ -401,13 +408,12 @@ class KritaMCPExtension(Extension):
                     "supported": False,
                     "message": f"API '{api_name}' is not available in this Krita version",
                 }
-        
+
         return {
             "status": "ok",
             "capabilities": self._api_capabilities,
             "selection_tools": [
-                name for name, available in self._api_capabilities.items()
-                if available and name != "krita_version"
+                name for name, available in self._api_capabilities.items() if available and name != "krita_version"
             ],
             "unsupported_apis": unsupported_guidance if unsupported_guidance else None,
         }
@@ -542,6 +548,8 @@ class KritaMCPExtension(Extension):
             "fill_selection": self.cmd_fill_selection,
             "deselect": self.cmd_deselect,
             "invert_selection": self.cmd_invert_selection,
+            "select_by_color": self.cmd_select_by_color,
+            "select_by_alpha": self.cmd_select_by_alpha,
             "save_selection": self.cmd_save_selection,
             "load_selection": self.cmd_load_selection,
             "selection_stats": self.cmd_selection_stats,
@@ -564,14 +572,16 @@ class KritaMCPExtension(Extension):
         # Record command in history (skip history queries to avoid recursion)
         if action != "get_command_history":
             status = "error" if "error" in result else "ok"
-            history_store.add({
-                "action": action,
-                "params": params,
-                "timestamp": time.time(),
-                "status": status,
-                "duration_ms": round(duration_ms, 2),
-                "error": result.get("error", {}).get("message") if status == "error" else None,
-            })
+            history_store.add(
+                {
+                    "action": action,
+                    "params": params,
+                    "timestamp": time.time(),
+                    "status": status,
+                    "duration_ms": round(duration_ms, 2),
+                    "error": result.get("error", {}).get("message") if status == "error" else None,
+                }
+            )
 
         return result
 
@@ -644,13 +654,15 @@ class KritaMCPExtension(Extension):
         all_nodes = self._get_all_nodes(doc.rootNode())
         layers = []
         for node in all_nodes:
-            layers.append({
-                "name": node.name(),
-                "type": node.type(),
-                "visible": node.visible(),
-                "opacity": node.opacity() / 255.0 if node.opacity() > 1.0 else node.opacity(),
-                "locked": node.locked(),
-            })
+            layers.append(
+                {
+                    "name": node.name(),
+                    "type": node.type(),
+                    "visible": node.visible(),
+                    "opacity": node.opacity() / 255.0 if node.opacity() > 1.0 else node.opacity(),
+                    "locked": node.locked(),
+                }
+            )
         return {"status": "ok", "layers": layers, "count": len(layers)}
 
     def cmd_create_layer(self, params: dict[str, Any]) -> dict[str, Any]:
@@ -760,11 +772,13 @@ class KritaMCPExtension(Extension):
         h = params.get("height", 100)
 
         if w < 1 or h < 1 or x < 0 or y < 0:
-             return make_error("Invalid selection dimensions", code="INVALID_PARAMETERS", recoverable=True)
+            return make_error("Invalid selection dimensions", code="INVALID_PARAMETERS", recoverable=True)
 
         selection = doc.selection()
         if not selection:
-             return make_error("Selection API not available in this Krita version", code="INTERNAL_ERROR", recoverable=False)
+            return make_error(
+                "Selection API not available in this Krita version", code="INTERNAL_ERROR", recoverable=False
+            )
 
         selection.select(x, y, w, h, 255)
         doc.refreshProjection()
@@ -789,7 +803,7 @@ class KritaMCPExtension(Extension):
                 "supported": False,
                 "message": "select_ellipse API is not available in this Krita version. Please upgrade Krita or use select_rect instead.",
             }
-        
+
         doc = self.get_active_document()
         if not doc:
             return make_error("No active document", code="NO_ACTIVE_DOCUMENT", recoverable=True)
@@ -804,7 +818,9 @@ class KritaMCPExtension(Extension):
 
         selection = doc.selection()
         if not selection:
-            return make_error("Selection API not available in this Krita version", code="INTERNAL_ERROR", recoverable=False)
+            return make_error(
+                "Selection API not available in this Krita version", code="INTERNAL_ERROR", recoverable=False
+            )
 
         try:
             selection.selectEllipse(cx - rx, cy - ry, rx * 2, ry * 2, 255)
@@ -824,7 +840,7 @@ class KritaMCPExtension(Extension):
                 "supported": False,
                 "message": "select_polygon API is not available in this Krita version. Please upgrade Krita or use select_rect instead.",
             }
-        
+
         doc = self.get_active_document()
         if not doc:
             return make_error("No active document", code="NO_ACTIVE_DOCUMENT", recoverable=True)
@@ -835,7 +851,9 @@ class KritaMCPExtension(Extension):
 
         selection = doc.selection()
         if not selection:
-            return make_error("Selection API not available in this Krita version", code="INTERNAL_ERROR", recoverable=False)
+            return make_error(
+                "Selection API not available in this Krita version", code="INTERNAL_ERROR", recoverable=False
+            )
 
         polygon = QPolygon([QPoint(int(p[0]), int(p[1])) for p in points])
         selection.selectPolygon(polygon, 255)
@@ -915,6 +933,7 @@ class KritaMCPExtension(Extension):
 
             # Krita's Selection.transform takes a QTransform
             from PyQt5.QtGui import QTransform
+
             transform = QTransform()
             transform.translate(dx, dy)
             transform.rotate(angle)
@@ -980,15 +999,64 @@ class KritaMCPExtension(Extension):
             return make_error(f"Border not supported: {exc}", code="INTERNAL_ERROR", recoverable=False)
 
     def cmd_combine_selections(self, params: dict[str, Any]) -> dict[str, Any]:
-        """Placeholder for selection combination (union/intersect/subtract).
+        """Combine the active selection with a second selection loaded from a mask file."""
+        doc = self.get_active_document()
+        if not doc:
+            return make_error("No active document", code="NO_ACTIVE_DOCUMENT", recoverable=True)
 
-        Full implementation requires a second selection source.
-        Currently used to mark the operation mode for subsequent selections.
-        """
         operation = params.get("operation", "union")
         if operation not in ("union", "intersect", "subtract"):
-            return make_error("Invalid operation. Use union, intersect, or subtract", code="INVALID_PARAMETERS", recoverable=True)
-        return {"status": "ok", "operation": operation, "note": "Combination mode set for next selection operation"}
+            return make_error(
+                "Invalid operation. Use union, intersect, or subtract", code="INVALID_PARAMETERS", recoverable=True
+            )
+
+        mask_path = str(params.get("mask_path", "")).strip()
+        if not mask_path:
+            return make_error("mask_path is required", code="INVALID_PARAMETERS", recoverable=True)
+
+        current_selection = doc.selection()
+        if not current_selection:
+            return make_error("No active selection to combine", code="NO_SELECTION", recoverable=True)
+
+        try:
+            doc_width = doc.width()
+            doc_height = doc.height()
+            other_selection, _ = self._selection_from_mask_path(mask_path, doc_width, doc_height)
+
+            from krita import Selection
+
+            combined = Selection()
+            selected_count = 0
+
+            for y in range(doc_height):
+                for x in range(doc_width):
+                    current_selected = current_selection.pixelSelected(x, y)
+                    other_selected = other_selection.pixelSelected(x, y)
+
+                    if operation == "union":
+                        include = current_selected or other_selected
+                    elif operation == "intersect":
+                        include = current_selected and other_selected
+                    else:
+                        include = current_selected and not other_selected
+
+                    if include:
+                        combined.select(x, y, 1, 1, 255)
+                        selected_count += 1
+
+            doc.setSelection(combined)
+            doc.refreshProjection()
+
+            return {
+                "status": "ok",
+                "operation": operation,
+                "mask_path": mask_path,
+                "selected_count": selected_count,
+            }
+        except FileNotFoundError:
+            return make_error(f"Failed to load mask: {mask_path}", code="FILE_NOT_FOUND", recoverable=True)
+        except Exception as exc:
+            return make_error(f"Failed to combine selections: {exc}", code="INTERNAL_ERROR", recoverable=True)
 
     def cmd_clear_selection(self, params: dict[str, Any]) -> dict[str, Any]:
         """Clear the content of the selection on the active layer."""
@@ -1059,43 +1127,44 @@ class KritaMCPExtension(Extension):
             doc_width = doc.width()
             doc_height = doc.height()
             pixel_data = layer.pixelData(0, 0, doc_width, doc_height)
-            
+
             selection = doc.selection()
             if not selection:
                 # Create new selection
                 from krita import Selection
+
                 selection = Selection()
-            
+
             if x is not None and y is not None and contiguous:
                 # Magic wand: flood-fill from point
                 target_idx = (y * doc_width + x) * 4
                 target_r = pixel_data[target_idx + 2]  # BGRA format
                 target_g = pixel_data[target_idx + 1]
                 target_b = pixel_data[target_idx]
-                
+
                 # Simple flood-fill using BFS
                 visited = set()
                 queue = [(x, y)]
                 tolerance_val = tolerance * 255
-                
+
                 while queue:
                     cx, cy = queue.pop(0)
                     if (cx, cy) in visited:
                         continue
                     if cx < 0 or cy < 0 or cx >= doc_width or cy >= doc_height:
                         continue
-                    
+
                     idx = (cy * doc_width + cx) * 4
                     r = pixel_data[idx + 2]
                     g = pixel_data[idx + 1]
                     b = pixel_data[idx]
-                    
+
                     # Check color distance
                     dist = ((r - target_r) ** 2 + (g - target_g) ** 2 + (b - target_b) ** 2) ** 0.5
                     if dist <= tolerance_val * 1.732:  # sqrt(3) for RGB space
                         selection.select(cx, cy, 1, 1, 255)
                         visited.add((cx, cy))
-                        queue.extend([(cx+1, cy), (cx-1, cy), (cx, cy+1), (cx, cy-1)])
+                        queue.extend([(cx + 1, cy), (cx - 1, cy), (cx, cy + 1), (cx, cy - 1)])
             else:
                 # Global: select all matching pixels
                 tolerance_val = tolerance * 255
@@ -1109,24 +1178,24 @@ class KritaMCPExtension(Extension):
                     # Use current foreground color
                     r, g, b = self._get_fg_color()
                     target_r, target_g, target_b = b, g, r  # Convert to BGRA
-                
+
                 for py in range(doc_height):
                     for px in range(doc_width):
                         idx = (py * doc_width + px) * 4
                         r = pixel_data[idx + 2]
                         g = pixel_data[idx + 1]
                         b = pixel_data[idx]
-                        
+
                         dist = ((r - target_r) ** 2 + (g - target_g) ** 2 + (b - target_b) ** 2) ** 0.5
                         if dist <= tolerance_val * 1.732:
                             selection.select(px, py, 1, 1, 255)
-            
+
             doc.setSelection(selection)
             doc.refreshProjection()
-            
+
             # Count selected pixels
-            selected_count = len(visited) if 'visited' in locals() else 0
-            
+            selected_count = len(visited) if "visited" in locals() else 0
+
             return {
                 "status": "ok",
                 "selected_count": selected_count,
@@ -1153,25 +1222,26 @@ class KritaMCPExtension(Extension):
             doc_width = doc.width()
             doc_height = doc.height()
             pixel_data = layer.pixelData(0, 0, doc_width, doc_height)
-            
+
             selection = doc.selection()
             if not selection:
                 from krita import Selection
+
                 selection = Selection()
-            
+
             selected_count = 0
             for py in range(doc_height):
                 for px in range(doc_width):
                     idx = (py * doc_width + px) * 4
                     alpha = pixel_data[idx + 3]  # Alpha channel in BGRA
-                    
+
                     if min_alpha <= alpha <= max_alpha:
                         selection.select(px, py, 1, 1, 255)
                         selected_count += 1
-            
+
             doc.setSelection(selection)
             doc.refreshProjection()
-            
+
             return {
                 "status": "ok",
                 "selected_count": selected_count,
@@ -1180,6 +1250,29 @@ class KritaMCPExtension(Extension):
             }
         except Exception as exc:
             return make_error(f"Alpha selection failed: {exc}", code="INTERNAL_ERROR", recoverable=True)
+
+    def _selection_from_mask_path(self, path: str, doc_width: int, doc_height: int) -> tuple[Any, int]:
+        """Load a selection mask image into a Krita Selection object."""
+        from PyQt5.QtGui import QImage
+        from krita import Selection
+
+        mask = QImage(path)
+        if mask.isNull():
+            raise FileNotFoundError(path)
+
+        selection = Selection()
+        loaded_pixels = 0
+
+        for y in range(min(mask.height(), doc_height)):
+            for x in range(min(mask.width(), doc_width)):
+                pixel = mask.pixel(x, y)
+                color = QColor(pixel)
+                brightness = (color.red() + color.green() + color.blue()) // 3
+                if brightness > 127:
+                    selection.select(x, y, 1, 1, 255)
+                    loaded_pixels += 1
+
+        return selection, loaded_pixels
 
     def cmd_save_selection(self, params: dict[str, Any]) -> dict[str, Any]:
         """Save current selection to a PNG mask file."""
@@ -1197,33 +1290,33 @@ class KritaMCPExtension(Extension):
         try:
             from PyQt5.QtGui import QImage
             from PyQt5.QtCore import QRect
-            
+
             doc_width = doc.width()
             doc_height = doc.height()
             bounds = selection.bounds()
-            
+
             # Create grayscale mask image
             mask = QImage(doc_width, doc_height, QImage.Format_Grayscale8)
-            
+
             # Fill mask based on selection
             for y in range(doc_height):
                 for x in range(doc_width):
                     selected = selection.pixelSelected(x, y)
                     mask.setPixel(x, y, 255 if selected else 0)
-            
+
             # Save to file
             if fmt.lower() == "png":
                 mask.save(path, "PNG")
             else:
                 mask.save(path, fmt.upper())
-            
+
             # Count selected pixels
             pixel_count = 0
             for y in range(doc_height):
                 for x in range(doc_width):
                     if selection.pixelSelected(x, y):
                         pixel_count += 1
-            
+
             return {
                 "status": "ok",
                 "path": path,
@@ -1242,38 +1335,20 @@ class KritaMCPExtension(Extension):
         path = params.get("path", "")
 
         try:
-            from PyQt5.QtGui import QImage
-            from krita import Selection
-            
-            mask = QImage(path)
-            if mask.isNull():
-                return make_error(f"Failed to load mask: {path}", code="FILE_NOT_FOUND", recoverable=True)
-            
             doc_width = doc.width()
             doc_height = doc.height()
-            
-            # Create new selection
-            selection = Selection()
-            loaded_pixels = 0
-            
-            for y in range(min(mask.height(), doc_height)):
-                for x in range(min(mask.width(), doc_width)):
-                    pixel = mask.pixel(x, y)
-                    # Use brightness as selection strength
-                    r, g, b = QColor(pixel).red(), QColor(pixel).green(), QColor(pixel).blue()
-                    brightness = (r + g + b) // 3
-                    if brightness > 127:  # Threshold at 50%
-                        selection.select(x, y, 1, 1, 255)
-                        loaded_pixels += 1
-            
+            selection, loaded_pixels = self._selection_from_mask_path(path, doc_width, doc_height)
+
             doc.setSelection(selection)
             doc.refreshProjection()
-            
+
             return {
                 "status": "ok",
                 "path": path,
                 "loaded_pixels": loaded_pixels,
             }
+        except FileNotFoundError:
+            return make_error(f"Failed to load mask: {path}", code="FILE_NOT_FOUND", recoverable=True)
         except Exception as exc:
             return make_error(f"Failed to load selection: {exc}", code="INTERNAL_ERROR", recoverable=True)
 
@@ -1351,6 +1426,7 @@ class KritaMCPExtension(Extension):
                 "height": bounds.height(),
             }
             import json
+
             doc.setAnnotation(f"kritamcp/channel/{name}", json.dumps(channel_data))
             doc.refreshProjection()
 
@@ -1399,6 +1475,7 @@ class KritaMCPExtension(Extension):
 
         try:
             import json
+
             channels = []
             # Iterate through document annotations to find selection channels
             annotation_keys = doc.annotations()
@@ -1408,15 +1485,17 @@ class KritaMCPExtension(Extension):
                     if data:
                         try:
                             info = json.loads(data)
-                            channels.append({
-                                "name": info.get("name", key.split("/")[-1]),
-                                "bounds": {
-                                    "x": info.get("x"),
-                                    "y": info.get("y"),
-                                    "width": info.get("width"),
-                                    "height": info.get("height"),
-                                },
-                            })
+                            channels.append(
+                                {
+                                    "name": info.get("name", key.split("/")[-1]),
+                                    "bounds": {
+                                        "x": info.get("x"),
+                                        "y": info.get("y"),
+                                        "width": info.get("width"),
+                                        "height": info.get("height"),
+                                    },
+                                }
+                            )
                         except json.JSONDecodeError:
                             channels.append({"name": key.split("/")[-1], "bounds": {}})
 

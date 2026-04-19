@@ -12,7 +12,7 @@ This subproject provides the core implementation of the Krita-MCP ecosystem, inc
 ## 🛠️ Components
 
 1. **Krita Plugin** (`krita-plugin/`) — A Python plugin for Krita that exposes a thread-safe HTTP server on `localhost` using the configured port (default `5678`).
-2. **MCP Server** (`src/krita_mcp/`) — A FastMCP server exposing 40+ painting and manipulation tools.
+2. **MCP Server** (`src/krita_mcp/`) — A FastMCP server exposing 50+ painting and manipulation tools.
 3. **Krita CLI** (`src/krita_cli/`) — A Typer-based command line interface for human operators.
 4. **Krita Client** (`src/krita_client/`) — A reusable, fully-typed Python library for Krita automation.
 
@@ -97,7 +97,13 @@ Repo artifacts for that workflow:
 - [Pelican bike skill](.codex-plugin/skills/pelican-bike-drawing/SKILL.md)
 - [Pelican anatomy reference notes](.codex-plugin/skills/pelican-bike-drawing/references/pelican-anatomy.md)
 
-## 🤖 MCP Server Tools (40 Total)
+## 🤖 MCP Server Tools (54 Declared Tools)
+
+For the exact source-derived command-by-command comparison between the plugin action surface, the current CLI, the current MCP server, and the earlier legacy `krita-mcp` server surface, see [docs/api-coverage-matrix.md](docs/api-coverage-matrix.md).
+
+For the broader question of whether the entire Krita API should be mapped, see [docs/krita-api-inventory.md](docs/krita-api-inventory.md).
+
+For the recommendation on where MCP should and should not track CLI parity, see [docs/cli-mcp-parity-assessment.md](docs/cli-mcp-parity-assessment.md).
 
 The MCP server exposes a vast range of capabilities to AI agents:
 
@@ -105,11 +111,11 @@ The MCP server exposes a vast range of capabilities to AI agents:
 |----------|-----------|
 | **Core** | `krita_health`, `krita_new_canvas`, `krita_save`, `krita_open_file` |
 | **Painting** | `krita_stroke`, `krita_fill`, `krita_draw_shape`, `krita_set_color`, `krita_set_brush` |
-| **Selection** | `krita_select_rect`, `krita_select_ellipse`, `krita_select_polygon`, `krita_select_by_color`, `krita_select_by_alpha` |
-| **Selection Ops** | `krita_transform_selection`, `krita_grow_selection`, `krita_combine_selections`, `krita_invert_selection` |
+| **Selection** | `krita_select_rect`, `krita_select_ellipse`, `krita_select_polygon`, `krita_selection_info`, `krita_deselect` |
+| **Selection Ops** | `krita_transform_selection`, `krita_grow_selection`, `krita_shrink_selection`, `krita_border_selection`, `krita_combine_selections`, `krita_invert_selection`, `krita_fill_selection` |
 | **Persistence** | `krita_save_selection`, `krita_load_selection`, `krita_save_selection_channel`, `krita_list_selection_channels` |
-| **Automation** | `krita_batch`, `krita_rollback`, `krita_get_command_history` |
-| **Inspection** | `krita_get_canvas_info`, `krita_get_color_at`, `krita_selection_stats`, `krita_security_status` |
+| **Automation** | `krita_batch`, `krita_rollback`, `krita_get_command_history`, `krita_list_tools` |
+| **Inspection** | `krita_get_canvas_info`, `krita_get_color_at`, `krita_selection_stats`, `krita_security_status`, `krita_get_capabilities` |
 
 ## ⚡ Performance
 

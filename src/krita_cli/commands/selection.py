@@ -225,6 +225,20 @@ def border_selection(
         _shared._print_result(result, f"Created {pixels}px border around selection")
 
 
+@app.command("combine-selections")
+def combine_selections(
+    ctx: Context,
+    operation: Annotated[str, typer.Argument(help="Combination mode: union, intersect, or subtract")],
+    mask_path: Annotated[str, typer.Argument(help="Path to the second selection mask image")],
+) -> None:
+    """Combine the current selection with a mask selection."""
+    client = _shared._get_client(ctx)
+    with _shared._handle_errors():
+        result = client.combine_selections(operation=operation, mask_path=mask_path)
+        count = result.get("selected_count", 0)
+        _shared._print_result(result, f"Combined selection via {operation}: {count} pixels")
+
+
 @app.command("save-selection")
 def save_selection(
     ctx: Context,

@@ -112,3 +112,16 @@ def test_deselect(httpx_mock: HTTPXMock) -> None:
     req = httpx_mock.get_request()
     body = json.loads(req.read())
     assert body["action"] == "deselect"
+
+
+def test_combine_selections(httpx_mock: HTTPXMock) -> None:
+    _setup_mock(httpx_mock, "combine_selections")
+    client = KritaClient()
+    result = client.combine_selections("union", mask_path="mask.png")
+
+    assert result["status"] == "ok"
+    req = httpx_mock.get_request()
+    body = json.loads(req.read())
+    assert body["action"] == "combine_selections"
+    assert body["params"]["operation"] == "union"
+    assert body["params"]["mask_path"] == "mask.png"

@@ -42,6 +42,16 @@ def test_current_brush(mock_client) -> None:
     assert "Soft" in result.stdout
 
 
+def test_capabilities(mock_client) -> None:
+    mock_client.get_capabilities.return_value = {
+        "status": "ok",
+        "capabilities": {"selection_bounds": True},
+    }
+    result = runner.invoke(app, ["introspect", "capabilities"])
+    assert result.exit_code == 0
+    assert "selection_bounds" in result.stdout
+
+
 def test_canvas_info_error(mock_client) -> None:
     mock_client.get_canvas_info.side_effect = KritaError("failed")
     result = runner.invoke(app, ["introspect", "canvas-info"])
@@ -57,4 +67,10 @@ def test_current_color_error(mock_client) -> None:
 def test_current_brush_error(mock_client) -> None:
     mock_client.get_current_brush.side_effect = KritaError("failed")
     result = runner.invoke(app, ["introspect", "current-brush"])
+    assert result.exit_code == 1
+
+
+def test_capabilities_error(mock_client) -> None:
+    mock_client.get_capabilities.side_effect = KritaError("failed")
+    result = runner.invoke(app, ["introspect", "capabilities"])
     assert result.exit_code == 1

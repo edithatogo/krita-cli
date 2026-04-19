@@ -377,6 +377,15 @@ class CombineSelectionParams(BaseModel):
     """Parameters for selection combination operations."""
 
     operation: Literal["union", "intersect", "subtract"]
+    mask_path: str
+
+    @field_validator("mask_path")
+    @classmethod
+    def validate_mask_path(cls, value: str) -> str:
+        if not value or not value.strip():
+            msg = "Path cannot be empty."
+            raise ValueError(msg)
+        return value.strip()
 
 
 # -- Batch operations ---------------------------------------------------------
