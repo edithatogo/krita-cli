@@ -4,6 +4,11 @@ Let AI agents paint in [Krita](https://krita.org/) via the [Model Context Protoc
 
 This subproject provides the core implementation of the Krita-MCP ecosystem, including the FastMCP server, the `krita` CLI, and the high-performance Python plugin.
 
+## 📦 Packages
+
+- **PyPI**: [`krita-cli`](https://pypi.org/project/krita-cli/)
+- **Conda**: [`doughnut/krita-cli`](https://anaconda.org/doughnut/krita-cli)
+
 ## 🛠️ Components
 
 1. **Krita Plugin** (`krita-plugin/`) — A Python plugin for Krita that exposes a thread-safe HTTP server on `localhost` using the configured port (default `5678`).
@@ -11,9 +16,28 @@ This subproject provides the core implementation of the Krita-MCP ecosystem, inc
 3. **Krita CLI** (`src/krita_cli/`) — A Typer-based command line interface for human operators.
 4. **Krita Client** (`src/krita_client/`) — A reusable, fully-typed Python library for Krita automation.
 
-## 🚀 Setup
+## 🚀 Install
 
-### 1. Krita Plugin Installation
+### 1. Install the CLI / client package
+
+Pick one package source:
+
+```bash
+pip install krita-cli
+```
+
+```bash
+uv tool install krita-cli
+```
+
+```bash
+conda install doughnut::krita-cli
+```
+
+The published package gives you the `krita` CLI, the Python client library, and the MCP server entry points. It does **not** install the desktop Krita plugin for you.
+
+### 2. Install the Krita desktop plugin
+
 Copy the contents of `krita-plugin/` to your Krita resources:
 - **Windows**: `%APPDATA%\krita\pykrita\`
 - **Linux**: `~/.local/share/krita/pykrita/`
@@ -21,13 +45,13 @@ Copy the contents of `krita-plugin/` to your Krita resources:
 
 Enable **"Krita MCP Bridge"** in Krita (Configure Krita → Python Plugin Manager) and restart.
 
-### 2. Environment Setup
+### 3. Development environment setup
 ```bash
 # Install dependencies with uv
 uv sync
 ```
 
-### 3. Windows Validation Checklist
+### 4. Windows validation checklist
 Before debugging the plugin, make sure the local Python runtime is healthy:
 
 1. `python -c "import ssl, ctypes"` must succeed.
@@ -55,6 +79,23 @@ The `krita` CLI is grouped into logical subcommands:
 - **System**: `health`, `config`, `capabilities`, `security-status`
 
 Run `uv run krita --help` for full details.
+
+## 🧪 Example Workflow
+
+The latest end-to-end workflow in this repo was an intentionally iterative "pelican on a bike" exercise used to harden the toolchain and the operator workflow:
+
+1. Start with a rough drawing and save it as version 1 instead of overwriting it.
+2. Promote repeated prompting and review behavior into a dedicated agent and `SKILL.md`.
+3. Study pelican references before redrawing so anatomy, posture, and proportions improve deliberately.
+4. Save every numbered iteration, compare them, and write down what changed.
+5. Archive the outputs and generate an animation/contact sheet to review the progression.
+
+Repo artifacts for that workflow:
+
+- [Learning log](notes/pelican-bike-learning-log.md)
+- [Pelican bike agent](.codex-plugin/agents/pelican-bike-illustrator.md)
+- [Pelican bike skill](.codex-plugin/skills/pelican-bike-drawing/SKILL.md)
+- [Pelican anatomy reference notes](.codex-plugin/skills/pelican-bike-drawing/references/pelican-anatomy.md)
 
 ## 🤖 MCP Server Tools (40 Total)
 
