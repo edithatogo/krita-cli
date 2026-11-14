@@ -1,0 +1,7 @@
+cff-version: 1.2.0
+message: If you use this fork, please cite it using the metadata in this file. For upstream
+  work, also follow the citation guidance at https://github.com/nanayax3/krita-mcp.
+title: Krita MCP Server & CLI (edithatogo fork)
+authors:
+- name: Krita MCP Contributors
+repository-code: https://github.com/edithatogo/krita-cli
